@@ -1,5 +1,33 @@
 (function () {
-  document.getElementById('year').textContent = new Date().getFullYear();
+  var yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  (function initMobileNav() {
+    var toggle = document.getElementById('nav-toggle');
+    var navList = document.getElementById('nav-list');
+    if (!toggle || !navList) return;
+    function open() {
+      document.body.classList.add('nav-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close menu');
+    }
+    function close() {
+      document.body.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+    }
+    toggle.addEventListener('click', function () {
+      if (document.body.classList.contains('nav-open')) close(); else open();
+    });
+    var overlay = document.getElementById('nav-overlay');
+    if (overlay) overlay.addEventListener('click', close);
+    navList.addEventListener('click', function (e) {
+      if (e.target.closest('a')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.body.classList.contains('nav-open')) close();
+    });
+  })();
 
   function runWithConfig(config) {
     if (!config || !config.routes || !config.destinations) return;

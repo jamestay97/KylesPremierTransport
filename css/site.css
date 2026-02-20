@@ -1157,78 +1157,187 @@ body.home .section-alt {
   }
 }
 
-/* Mobile: prevent header overlap and improve touch targets */
-@media (max-width: 900px) {
-  .site-header .container {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-  }
+/* ----- Mobile: hamburger menu & layout ----- */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-toggle:hover {
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+}
+.nav-toggle-bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px;
+  margin: 0 auto;
+  transition: transform 0.2s, opacity 0.2s;
+}
+body.nav-open .nav-toggle-bar:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+body.nav-open .nav-toggle-bar:nth-child(2) {
+  opacity: 0;
+}
+body.nav-open .nav-toggle-bar:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
 
+.nav-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 98;
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0.25s, opacity 0.25s;
+  }
+  body.nav-open .nav-overlay {
+    visibility: visible;
+    opacity: 1;
+  }
+  .nav-wrap {
+    position: relative;
+  }
+  .nav-toggle {
+    display: flex;
+  }
+  .nav-list {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(280px, 85vw);
+    height: 100vh;
+    margin: 0;
+    padding: 4.5rem 1.5rem 1.5rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--color-white);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+    z-index: 99;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    visibility: hidden;
+  }
+  body.nav-open .nav-list {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .nav-list li {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  .nav-list a {
+    display: block;
+    padding: 0.9rem 0.5rem;
+    font-size: 1rem;
+  }
+  .nav-cta {
+    margin-top: 0.5rem;
+    text-align: center;
+    padding: 0.65rem 1rem !important;
+  }
+  .site-header .container {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
   .logo {
     font-size: 1.15rem;
   }
-
   .logo-img {
     height: 2rem;
   }
-
-  .nav-list {
-    gap: 0.75rem;
-    font-size: 0.9rem;
-  }
-
-  .nav-list a {
-    padding: 0.25rem 0;
-  }
-
   #how-it-works,
   #pricing,
   #reviews,
   #faq,
   #contact {
-    scroll-margin-top: 6.5rem;
+    scroll-margin-top: 4.5rem;
   }
-
+  body.home .section,
+  body.home .section-alt {
+    margin-top: 3rem;
+  }
+  body.home #reviews {
+    margin-top: 3rem;
+  }
   body.home .hero {
-    min-height: 70vh;
-    padding: 2.5rem 0;
+    min-height: 65vh;
+    padding: 2rem 0;
   }
-
   body.home #how-it-works {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
   }
-
   .section,
   .section-alt {
-    padding-top: 2.5rem;
-    padding-bottom: 2.5rem;
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
   }
-}
-
-@media (max-width: 600px) {
-  .site-header .container {
+  .container {
     padding-left: 1rem;
     padding-right: 1rem;
   }
-
-  .nav-list {
-    gap: 0.5rem;
-    font-size: 0.85rem;
+  .hero h1 {
+    font-size: 1.6rem;
   }
-
-  .nav-cta {
-    padding: 0.4rem 0.65rem;
-    font-size: 0.85rem;
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
   }
+  .hero-buttons .btn {
+    width: 100%;
+    max-width: 280px;
+  }
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .pricing-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pricing-arrow {
+    text-align: center;
+    padding: 0.25rem 0;
+  }
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+  .footer-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+}
 
-  #how-it-works,
-  #pricing,
-  #reviews,
-  #faq,
-  #contact {
-    scroll-margin-top: 7rem;
+@media (max-width: 480px) {
+  .hero h1 {
+    font-size: 1.45rem;
+  }
+  .section-title h2 {
+    font-size: 1.5rem;
+  }
+  .booking-form {
+    padding: 1.25rem 1rem;
   }
 }
 

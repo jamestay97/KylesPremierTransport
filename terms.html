@@ -3,18 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terms and Conditions | Premier Transport</title>
+  <title>Terms and Conditions | Premier Transport – Tampa Airport Rides</title>
+  <meta name="description" content="Terms and conditions for Premier Transport airport shuttle and transportation services in the Tampa Bay area.">
+  <link rel="canonical" href="https://premiertransport.services/terms.html">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://premiertransport.services/terms.html">
+  <meta property="og:title" content="Terms and Conditions | Premier Transport">
+  <meta property="og:site_name" content="Premier Transport">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/site.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
 </head>
 <body>
   <header class="site-header">
     <div class="container">
       <div class="logo"><a href="index.html"><img src="images/logo.png" alt="Premier Transport" class="logo-img">Premier Transport</a></div>
-      <nav>
-        <ul class="nav-list">
+      <nav class="nav-wrap">
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav-list">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <ul class="nav-list" id="nav-list">
           <li><a href="index.html#how-it-works">How It Works</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
           <li><a href="index.html#faq">FAQ</a></li>
@@ -22,6 +33,7 @@
           <li><a href="policies.html">Policies</a></li>
           <li><a href="book.html" class="nav-cta">Book Now</a></li>
         </ul>
+        <div class="nav-overlay" id="nav-overlay" aria-hidden="true"></div>
       </nav>
     </div>
   </header>
@@ -68,7 +80,7 @@
       </p>
     </div>
   </div>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="js/main.js"></script>
   <script>
     (function () {
       var link = document.getElementById('taylor-dev-link');

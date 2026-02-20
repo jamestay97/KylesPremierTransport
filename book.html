@@ -4,20 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Book Your Ride | Premier Transport – Tampa Airport Rides</title>
-  <meta name="description" content="Book airport transportation from Pinellas & Pasco to Tampa (TPA). Reserve your ride online – Premier Transport.">
+  <meta name="description" content="Book airport transportation from Pinellas & Pasco to Tampa (TPA). Reserve your ride online – Premier Transport. (727) 999-4999.">
+  <link rel="canonical" href="https://premiertransport.services/book.html">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://premiertransport.services/book.html">
+  <meta property="og:title" content="Book Your Ride | Premier Transport – Tampa Airport Rides">
+  <meta property="og:description" content="Book airport transportation from Pinellas & Pasco to Tampa (TPA). Reserve your ride online.">
+  <meta property="og:site_name" content="Premier Transport">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Book Your Ride | Premier Transport">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://maps.googleapis.com">
   <link rel="preconnect" href="https://maps.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/site.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
 </head>
 <body>
   <header class="site-header">
     <div class="container">
       <div class="logo"><a href="index.html"><img src="images/logo.png" alt="Premier Transport" class="logo-img">Premier Transport</a></div>
-      <nav>
-        <ul class="nav-list">
+      <nav class="nav-wrap">
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav-list">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <ul class="nav-list" id="nav-list">
           <li><a href="index.html#how-it-works">How It Works</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
           <li><a href="index.html#faq">FAQ</a></li>
@@ -25,6 +38,7 @@
           <li><a href="policies.html">Policies</a></li>
           <li><a href="book.html" class="nav-cta">Book Now</a></li>
         </ul>
+        <div class="nav-overlay" id="nav-overlay" aria-hidden="true"></div>
       </nav>
     </div>
   </header>
@@ -241,8 +255,8 @@
   </div>
 
   <script src="js/destinations-config.js"></script>
+  <script src="js/main.js"></script>
   <script src="js/booking.js"></script>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
   <script>
     (function () {
       var link = document.getElementById('taylor-dev-link');
