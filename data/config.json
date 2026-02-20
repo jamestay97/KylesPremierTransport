@@ -1,0 +1,29 @@
+{
+  "overnightSurcharge": 10,
+  "overnightSurchargeStart": "22:00",
+  "overnightSurchargeEnd": "06:00",
+  "carSeatFee": 10,
+  "addons": [
+    { "id": "car_seat", "label": "Car seat or booster", "price": 10, "enabled": true }
+  ],
+  "googleReviewUrl": "",
+  "googleMapsApiKey": "AIzaSyD1PZ2WnJNrK4BqJrjQ4gebItgZ4EBHxdY",
+  "destinations": [
+    { "id": "tpa", "name": "Tampa International Airport (TPA)", "isAirport": true, "address": "Tampa International Airport, Tampa, FL" },
+    { "id": "pinellas", "name": "Pinellas County", "address": "Pinellas County, FL" },
+    { "id": "pasco", "name": "Pasco County", "address": "Pasco County, FL" },
+    { "id": "holiday", "name": "Holiday, FL", "address": "Holiday, FL" },
+    { "id": "npr", "name": "Downtown New Port Richey", "address": "New Port Richey, FL" },
+    { "id": "other", "name": "Other (enter address)" }
+  ],
+  "routes": [
+    { "fromId": "pinellas", "toId": "tpa", "priceMin": 45, "priceMax": 45 },
+    { "fromId": "tpa", "toId": "pinellas", "priceMin": 55, "priceMax": 55 },
+    { "fromId": "pasco", "toId": "tpa", "priceMin": 65, "priceMax": 85 },
+    { "fromId": "tpa", "toId": "pasco", "priceMin": 65, "priceMax": 85 },
+    { "fromId": "holiday", "toId": "tpa", "priceMin": 55, "priceMax": 65 },
+    { "fromId": "tpa", "toId": "holiday", "priceMin": 55, "priceMax": 65 },
+    { "fromId": "npr", "toId": "tpa", "priceMin": 55, "priceMax": 65 },
+    { "fromId": "tpa", "toId": "npr", "priceMin": 55, "priceMax": 65 }
+  ]
+}

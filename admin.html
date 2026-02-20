@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Premier Transport</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <style>
+    .admin-wrap { max-width: 720px; margin: 2rem auto; padding: 0 1.25rem; }
+    .admin-wrap h1 { margin-bottom: 1.5rem; color: var(--color-primary); }
+    .admin-section { margin-bottom: 2rem; }
+    .admin-section h2 { font-size: 1.2rem; margin-bottom: 1rem; }
+    .login-form .form-group { margin-bottom: 1rem; }
+    .login-form label { display: block; font-weight: 600; margin-bottom: 0.35rem; }
+    .login-form input { width: 100%; max-width: 280px; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e0; border-radius: 8px; }
+    .login-error { color: #c53030; margin-top: 0.5rem; }
+    .dest-list, .route-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+    .dest-list li, .route-list li { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .dest-list input, .route-list input { padding: 0.4rem 0.5rem; border: 1px solid #cbd5e0; border-radius: 6px; }
+    .dest-list input[type="text"]:first-of-type { width: 100px; }
+    .dest-list input[type="text"]:last-of-type { flex: 1; min-width: 160px; }
+    .addon-row input[data-field="id"] { width: 100px; }
+    .addon-row input[data-field="label"] { flex: 1; min-width: 140px; }
+    .addon-row input[data-field="price"] { width: 60px; }
+    #addons-list li { align-items: center; }
+    #reviews-list-admin li { flex-wrap: wrap; align-items: flex-start; }
+    #reviews-list-admin .review-row-author { width: 140px; }
+    #reviews-list-admin .review-row-stars { width: 60px; }
+    #reviews-list-admin .review-row-text { width: 100%; min-width: 200px; min-height: 60px; margin-top: 0.35rem; }
+    .route-list input { width: 80px; }
+    .route-list select { padding: 0.4rem; border-radius: 6px; min-width: 120px; }
+    .btn-remove { padding: 0.35rem 0.6rem; font-size: 0.85rem; background: #e53e3e; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-remove:hover { background: #c53030; }
+    .btn-add { margin-top: 0.5rem; }
+    .save-bar { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
+    .save-status { margin-top: 0.5rem; font-size: 0.9rem; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .admin-header a { color: var(--color-primary); }
+    #admin-editor { display: none; }
+    #login-form { display: none; }
+    #login-form.show, #admin-editor.show { display: block; }
+    .crm-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .crm-tab { padding: 0.5rem 1rem; border: 1px solid #cbd5e0; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .crm-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .crm-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .crm-panel { display: none; }
+    .crm-panel.show { display: block; }
+    .crm-table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+    .crm-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .crm-table th, .crm-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .crm-table th { font-weight: 600; color: var(--color-primary); background: #f7fafc; }
+    .crm-table tr:hover { background: #f7fafc; }
+    .crm-table .trip-summary { font-size: 0.85rem; color: #4a5568; margin-top: 0.25rem; }
+    .crm-table .customer-detail-toggle { padding: 0.2rem 0.5rem; font-size: 0.8rem; cursor: pointer; }
+    .crm-trips-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .crm-trip-card { padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+    .crm-trip-card .trip-head { font-weight: 600; color: var(--color-primary); margin-bottom: 0.35rem; }
+    .crm-trip-card .trip-meta { font-size: 0.85rem; color: #4a5568; }
+    .crm-trip-card .trip-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+    .crm-trip-card .trip-badge.active { background: #c6f6d5; color: #276749; }
+    .crm-trip-card .trip-badge.completed { background: #e2e8f0; color: #4a5568; }
+    .crm-empty { color: #718096; font-size: 0.9rem; margin: 1rem 0; }
+    .crm-refresh { margin-top: 0.5rem; }
+    .crm-customer-details { display: none; }
+    .crm-customer-details.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <div id="login-form" class="login-form">
+      <h1>Admin login</h1>
+      <p class="form-hint">Sign in to edit locations and pricing.</p>
+      <form id="login-submit">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" name="email" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" name="password" required autocomplete="current-password">
+        </div>
+        <p id="login-error" class="login-error" style="display: none;"></p>
+        <button type="submit" class="btn btn-primary">Sign in</button>
+      </form>
+    </div>
+
+    <div id="admin-editor">
+      <div class="admin-header">
+        <h1>Edit locations & pricing</h1>
+        <a href="index.html">← Back to site</a>
+        <button type="button" class="btn btn-outline" id="logout-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Log out</button>
+      </div>
+
+      <div class="admin-section crm-section">
+        <h2>CRM – Customers & trips</h2>
+        <p class="form-hint">Customers from booking form submissions. No duplicates; last ride date and trip summary per customer. Trips are active (upcoming) or completed (past).</p>
+        <div class="crm-tabs">
+          <button type="button" class="crm-tab active" data-tab="customers">Customers</button>
+          <button type="button" class="crm-tab" data-tab="active">Active trips</button>
+          <button type="button" class="crm-tab" data-tab="completed">Completed trips</button>
+        </div>
+        <div id="crm-customers" class="crm-panel show">
+          <div class="crm-table-wrap">
+            <table class="crm-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Last ride</th>
+                  <th>Trips</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="crm-customers-body"></tbody>
+            </table>
+          </div>
+          <p class="crm-empty" id="crm-customers-empty" style="display: none;">No customers yet.</p>
+        </div>
+        <div id="crm-active" class="crm-panel">
+          <div class="crm-trips-list" id="crm-active-body"></div>
+          <p class="crm-empty" id="crm-active-empty" style="display: none;">No active (upcoming) trips.</p>
+        </div>
+        <div id="crm-completed" class="crm-panel">
+          <div class="crm-trips-list" id="crm-completed-body"></div>
+          <p class="crm-empty" id="crm-completed-empty" style="display: none;">No completed trips yet.</p>
+        </div>
+        <p class="crm-refresh">
+          <button type="button" class="btn btn-outline" id="crm-refresh-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Refresh CRM</button>
+        </p>
+      </div>
+
+      <div class="admin-section">
+        <h2>Surcharge timing</h2>
+        <p class="form-hint">When a booking’s pickup time falls between these hours, the surcharge amount is added automatically (e.g. 10pm–6am overnight).</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start time</label>
+            <input type="time" id="surcharge-start" value="22:00">
+          </div>
+          <div class="form-group">
+            <label>End time</label>
+            <input type="time" id="surcharge-end" value="06:00">
+          </div>
+          <div class="form-group">
+            <label>Surcharge amount ($)</label>
+            <input type="number" id="fee-overnight" min="0" step="1" value="10">
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>Homepage & messaging</h2>
+        <p class="form-hint">Text shown on the homepage and booking page. Leave blank to use defaults.</p>
+        <div class="form-group">
+          <label>Round trip promo (by Get a quote)</label>
+          <input type="text" id="round-trip-promo" placeholder="Round trips as low as $100">
+        </div>
+        <div class="form-group">
+          <label>Shuttles / availability message</label>
+          <input type="text" id="shuttles-message" placeholder="Shuttles available anytime!">
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>Google review & map</h2>
+        <p class="form-hint">Optional: set your Google review link (e.g. from Google Business) and a Maps API key for the booking form trip preview with traffic.</p>
+        <div class="form-group">
+          <label>Google review URL</label>
+          <input type="url" id="google-review-url" placeholder="https://search.google.com/local/writereview?placeid=...">
+        </div>
+        <div class="form-group">
+          <label>Google Maps API key (for trip map + traffic)</label>
+          <input type="text" id="google-maps-key" placeholder="Leave blank to show link only">
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>Reviews (show on homepage)</h2>
+        <p class="form-hint">Paste reviews from Google (or anywhere). They appear on the homepage with “From Google” attribution. Set the Google review URL above so “See all reviews” links to your listing.</p>
+        <ul class="dest-list" id="reviews-list-admin"></ul>
+        <button type="button" class="btn btn-outline btn-add" id="add-review" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add review</button>
+      </div>
+
+      <div class="admin-section">
+        <h2>Add-ons (checkout form)</h2>
+        <p class="form-hint">Optional items customers can select when booking. Use a short id (e.g. car_seat) for the form field.</p>
+        <ul class="dest-list" id="addons-list"></ul>
+        <button type="button" class="btn btn-outline btn-add" id="add-addon" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add add-on</button>
+      </div>
+
+      <div class="admin-section">
+        <h2>Destinations</h2>
+        <p class="form-hint">Locations that appear in the dropdowns. Use a short id (e.g. tpa, pinellas).</p>
+        <ul class="dest-list" id="dest-list"></ul>
+        <button type="button" class="btn btn-outline btn-add" id="add-dest" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add destination</button>
+      </div>
+
+      <div class="admin-section">
+        <h2>Routes (pricing)</h2>
+        <p class="form-hint">From → To with price range. Use same number for flat rate.</p>
+        <ul class="route-list" id="route-list"></ul>
+        <button type="button" class="btn btn-outline btn-add" id="add-route" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add route</button>
+      </div>
+
+      <div class="save-bar">
+        <button type="button" class="btn btn-primary" id="save-config">Save changes</button>
+        <p class="save-status" id="save-status"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var API = '';
+    function getConfig() {
+      return fetch(API + '/api/config').then(function (r) { return r.json(); });
+    }
+    function checkAuth() {
+      return fetch(API + '/api/me', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+    }
+
+    var loginForm = document.getElementById('login-form');
+    var adminEditor = document.getElementById('admin-editor');
+    var loginSubmit = document.getElementById('login-submit');
+    var loginError = document.getElementById('login-error');
+    var destList = document.getElementById('dest-list');
+    var routeList = document.getElementById('route-list');
+    var addonsList = document.getElementById('addons-list');
+    var reviewsListAdmin = document.getElementById('reviews-list-admin');
+    var saveStatus = document.getElementById('save-status');
+
+    function showLogin() {
+      loginForm.classList.add('show');
+      adminEditor.classList.remove('show');
+    }
+    function showEditor() {
+      loginForm.classList.remove('show');
+      adminEditor.classList.add('show');
+      loadAndRender();
+      loadCRM();
+    }
+
+    checkAuth().then(function (data) {
+      if (data.loggedIn) showEditor();
+      else showLogin();
+    }).catch(function () {
+      showLogin();
+    });
+
+    loginSubmit.addEventListener('submit', function (e) {
+      e.preventDefault();
+      loginError.style.display = 'none';
+      fetch(API + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('login-email').value,
+          password: document.getElementById('login-password').value
+        }),
+        credentials: 'same-origin'
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.ok) showEditor();
+        else {
+          loginError.textContent = data.error || 'Login failed';
+          loginError.style.display = 'block';
+        }
+      }).catch(function () {
+        loginError.textContent = 'Network error. Is the server running?';
+        loginError.style.display = 'block';
+      });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function () {
+      fetch(API + '/api/logout', { method: 'POST', credentials: 'same-origin' })
+        .then(function () { showLogin(); });
+    });
+
+    function normalizePhone(phone) {
+      return (phone || '').replace(/\D/g, '') || ('email:' + (document ? '' : ''));
+    }
+    function getTripDateTime(b) {
+      var d = (b.pickup_date || '').trim();
+      var t = (b.pickup_time || '').trim();
+      if (!d) return null;
+      var str = d + 'T' + (t || '00:00') + ':00';
+      var date = new Date(str);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    function isTripActive(b) {
+      var dt = getTripDateTime(b);
+      return dt ? dt > new Date() : false;
+    }
+    function formatDate(d) {
+      if (!d) return '—';
+      var x = new Date(d);
+      return isNaN(x.getTime()) ? d : x.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function formatDateTime(b) {
+      var dt = getTripDateTime(b);
+      if (!dt) return '—';
+      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+    function tripSummary(b) {
+      var from = (b.pickup_address || 'Pickup').trim() || 'Pickup';
+      var to = (b.dropoff_dest || b.dropoff_other_address || 'Destination').trim() || 'Destination';
+      var parts = [from + ' → ' + to, formatDateTime(b)];
+      if (b.round_trip) parts.push('Round trip');
+      if (b.passengers > 0) parts.push(b.passengers + ' passenger' + (b.passengers !== 1 ? 's' : ''));
+      return parts.join(' · ');
+    }
+    function groupByCustomer(bookings) {
+      var map = {};
+      bookings.forEach(function (b) {
+        var key = normalizePhone(b.phone) || ('e:' + (b.email || '').toLowerCase());
+        if (!key) key = 'unknown';
+        if (!map[key]) {
+          map[key] = { name: b.name, phone: b.phone, email: b.email, trips: [], lastRideDate: null };
+        }
+        var rec = map[key];
+        rec.name = rec.name || b.name;
+        rec.phone = rec.phone || b.phone;
+        rec.email = rec.email || b.email;
+        rec.trips.push(b);
+        var dt = getTripDateTime(b);
+        if (dt && dt <= new Date() && (!rec.lastRideDate || dt > rec.lastRideDate)) rec.lastRideDate = dt;
+      });
+      var list = Object.keys(map).map(function (k) {
+        var c = map[k];
+        c.trips.sort(function (a, b) {
+          var da = getTripDateTime(a);
+          var db = getTripDateTime(b);
+          if (!da) return 1;
+          if (!db) return -1;
+          return db - da;
+        });
+        return c;
+      });
+      list.sort(function (a, b) {
+        var at = a.lastRideDate ? a.lastRideDate.getTime() : 0;
+        var bt = b.lastRideDate ? b.lastRideDate.getTime() : 0;
+        return bt - at;
+      });
+      return list;
+    }
+
+    function loadCRM() {
+      fetch(API + '/api/bookings', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .catch(function () { return []; })
+        .then(function (bookings) {
+          var active = bookings.filter(isTripActive);
+          var completed = bookings.filter(function (b) { return !isTripActive(b); });
+          var customers = groupByCustomer(bookings);
+
+          document.querySelectorAll('.crm-tab').forEach(function (btn) {
+            btn.classList.toggle('active', btn.dataset.tab === 'customers');
+          });
+          document.querySelectorAll('.crm-panel').forEach(function (panel) {
+            panel.classList.remove('show');
+          });
+          var customersBody = document.getElementById('crm-customers-body');
+          var customersEmpty = document.getElementById('crm-customers-empty');
+          if (customersBody) {
+            customersBody.innerHTML = '';
+            customers.forEach(function (c) {
+              var lastRideStr = c.lastRideDate ? formatDate(c.lastRideDate) : '—';
+              var tr = document.createElement('tr');
+              tr.innerHTML = '<td>' + (c.name || '—').replace(/</g, '&lt;') + '</td>' +
+                '<td>' + (c.phone || '—').replace(/</g, '&lt;') + '</td>' +
+                '<td>' + (c.email || '—').replace(/</g, '&lt;') + '</td>' +
+                '<td>' + lastRideStr + '</td>' +
+                '<td>' + c.trips.length + '</td>' +
+                '<td><button type="button" class="customer-detail-toggle">Details</button></td>';
+              var detailsBtn = tr.querySelector('button');
+              var detailsRow = document.createElement('tr');
+              detailsRow.className = 'crm-customer-details';
+              detailsRow.innerHTML = '<td colspan="6"><div class="crm-table-wrap"><ul style="list-style:none;padding:0;margin:0;font-size:0.85rem;">' +
+                c.trips.map(function (t) {
+                  return '<li style="padding:0.35rem 0;border-bottom:1px solid #eee;">' + tripSummary(t).replace(/</g, '&lt;') + '</li>';
+                }).join('') + '</ul></div></td>';
+              detailsBtn.addEventListener('click', function () {
+                detailsRow.classList.toggle('show');
+              });
+              customersBody.appendChild(tr);
+              customersBody.appendChild(detailsRow);
+            });
+            if (customersEmpty) customersEmpty.style.display = customers.length ? 'none' : 'block';
+          }
+          document.getElementById('crm-customers').classList.add('show');
+
+          var activeBody = document.getElementById('crm-active-body');
+          var activeEmpty = document.getElementById('crm-active-empty');
+          if (activeBody) {
+            activeBody.innerHTML = '';
+            active.forEach(function (b) {
+              var card = document.createElement('div');
+              card.className = 'crm-trip-card';
+              card.innerHTML = '<div class="trip-head">' + (b.name || '—').replace(/</g, '&lt;') + ' <span class="trip-badge active">Active</span></div>' +
+                '<div class="trip-meta">' + tripSummary(b).replace(/</g, '&lt;') + '</div>' +
+                '<div class="trip-meta">' + (b.phone || '').replace(/</g, '&lt;') + ' · ' + (b.email || '').replace(/</g, '&lt;') + '</div>';
+              activeBody.appendChild(card);
+            });
+            if (activeEmpty) activeEmpty.style.display = active.length ? 'none' : 'block';
+          }
+
+          var completedBody = document.getElementById('crm-completed-body');
+          var completedEmpty = document.getElementById('crm-completed-empty');
+          if (completedBody) {
+            completedBody.innerHTML = '';
+            completed.forEach(function (b) {
+              var card = document.createElement('div');
+              card.className = 'crm-trip-card';
+              card.innerHTML = '<div class="trip-head">' + (b.name || '—').replace(/</g, '&lt;') + ' <span class="trip-badge completed">Completed</span></div>' +
+                '<div class="trip-meta">' + tripSummary(b).replace(/</g, '&lt;') + '</div>' +
+                '<div class="trip-meta">' + (b.phone || '').replace(/</g, '&lt;') + ' · ' + (b.email || '').replace(/</g, '&lt;') + '</div>';
+              completedBody.appendChild(card);
+            });
+            if (completedEmpty) completedEmpty.style.display = completed.length ? 'none' : 'block';
+          }
+        });
+    }
+
+    document.querySelectorAll('.crm-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tab = this.dataset.tab;
+        document.querySelectorAll('.crm-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+        document.querySelectorAll('.crm-panel').forEach(function (p) { p.classList.remove('show'); });
+        var panel = document.getElementById('crm-' + tab);
+        if (panel) panel.classList.add('show');
+      });
+    });
+    var crmRefreshBtn = document.getElementById('crm-refresh-btn');
+    if (crmRefreshBtn) crmRefreshBtn.addEventListener('click', loadCRM);
+
+    var config = { destinations: [], routes: [] };
+
+    function loadAndRender() {
+      getConfig().then(function (c) {
+        config = c;
+        document.getElementById('fee-overnight').value = c.overnightSurcharge || 10;
+        document.getElementById('surcharge-start').value = c.overnightSurchargeStart || '22:00';
+        document.getElementById('surcharge-end').value = c.overnightSurchargeEnd || '06:00';
+        document.getElementById('round-trip-promo').value = c.roundTripPromo || '';
+        document.getElementById('shuttles-message').value = c.shuttlesMessage || '';
+        document.getElementById('google-review-url').value = c.googleReviewUrl || '';
+        document.getElementById('google-maps-key').value = c.googleMapsApiKey || '';
+        renderDests();
+        renderRoutes();
+        renderAddons();
+        renderReviews();
+      });
+    }
+
+    function renderReviews() {
+      if (!reviewsListAdmin) return;
+      reviewsListAdmin.innerHTML = '';
+      (config.reviews || []).forEach(function (r, i) {
+        var li = document.createElement('li');
+        li.innerHTML = '<input type="text" class="review-row-author" placeholder="Author name" value="' + (r.author || '').replace(/"/g, '&quot;') + '" data-field="author">' +
+          '<input type="number" class="review-row-stars" placeholder="Stars" value="' + (r.stars ?? '5') + '" data-field="stars" min="1" max="5">' +
+          '<button type="button" class="btn-remove">Remove</button>' +
+          '<textarea class="review-row-text" placeholder="Review text" data-field="text">' + (r.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>';
+        li.querySelector('.btn-remove').addEventListener('click', function () {
+          config.reviews.splice(i, 1);
+          renderReviews();
+        });
+        reviewsListAdmin.appendChild(li);
+      });
+    }
+
+    function renderAddons() {
+      addonsList.innerHTML = '';
+      (config.addons || []).forEach(function (a, i) {
+        var li = document.createElement('li');
+        li.className = 'addon-row';
+        var en = a.enabled !== false;
+        li.innerHTML = '<input type="text" placeholder="id" value="' + (a.id || '').replace(/"/g, '&quot;') + '" data-field="id">' +
+          '<input type="text" placeholder="Label" value="' + (a.label || '').replace(/"/g, '&quot;') + '" data-field="label">' +
+          '<input type="number" placeholder="$" value="' + (a.price ?? '') + '" data-field="price" min="0" style="width:60px">' +
+          '<label style="display:flex;align-items:center;gap:0.35rem;margin:0;white-space:nowrap;"><input type="checkbox" data-field="enabled" ' + (en ? 'checked' : '') + '> Show on form</label>' +
+          '<button type="button" class="btn-remove">Remove</button>';
+        li.querySelector('.btn-remove').addEventListener('click', function () {
+          config.addons.splice(i, 1);
+          renderAddons();
+        });
+        addonsList.appendChild(li);
+      });
+    }
+
+    function renderDests() {
+      destList.innerHTML = '';
+      (config.destinations || []).forEach(function (d, i) {
+        var li = document.createElement('li');
+        li.innerHTML = '<input type="text" placeholder="id" value="' + (d.id || '').replace(/"/g, '&quot;') + '" data-field="id">' +
+          '<input type="text" placeholder="Display name" value="' + (d.name || '').replace(/"/g, '&quot;') + '" data-field="name">' +
+          '<input type="text" placeholder="Address (for map)" value="' + (d.address || '').replace(/"/g, '&quot;') + '" data-field="address" style="min-width:180px">' +
+          '<button type="button" class="btn-remove">Remove</button>';
+        li.querySelectorAll('input').forEach(function (inp) {
+          inp.addEventListener('change', function () {
+            config.destinations[i][inp.dataset.field] = inp.value.trim();
+          });
+        });
+        li.querySelector('.btn-remove').addEventListener('click', function () {
+          config.destinations.splice(i, 1);
+          renderDests();
+        });
+        destList.appendChild(li);
+      });
+    }
+
+    function renderRoutes() {
+      var dests = config.destinations || [];
+      routeList.innerHTML = '';
+      (config.routes || []).forEach(function (r, i) {
+        var li = document.createElement('li');
+        var fromOpts = dests.map(function (d) {
+          return '<option value="' + (d.id || '').replace(/"/g, '&quot;') + '"' + (r.fromId === d.id ? ' selected' : '') + '>' + (d.name || d.id || '').replace(/</g, '&lt;') + '</option>';
+        }).join('');
+        var toOpts = dests.map(function (d) {
+          return '<option value="' + (d.id || '').replace(/"/g, '&quot;') + '"' + (r.toId === d.id ? ' selected' : '') + '>' + (d.name || d.id || '').replace(/</g, '&lt;') + '</option>';
+        }).join('');
+        li.innerHTML = '<select data-field="fromId">' + fromOpts + '</select>' +
+          '<span>→</span>' +
+          '<select data-field="toId">' + toOpts + '</select>' +
+          '<input type="number" placeholder="Min $" value="' + (r.priceMin ?? '') + '" data-field="priceMin" min="0">' +
+          '<input type="number" placeholder="Max $" value="' + (r.priceMax ?? '') + '" data-field="priceMax" min="0">' +
+          '<button type="button" class="btn-remove">Remove</button>';
+        li.querySelectorAll('select').forEach(function (sel) {
+          sel.addEventListener('change', function () {
+            config.routes[i][sel.dataset.field] = sel.value;
+          });
+        });
+        li.querySelectorAll('input[type="number"]').forEach(function (inp) {
+          inp.addEventListener('input', function () {
+            config.routes[i][inp.dataset.field] = parseInt(inp.value, 10) || 0;
+          });
+        });
+        li.querySelector('.btn-remove').addEventListener('click', function () {
+          config.routes.splice(i, 1);
+          renderRoutes();
+        });
+        routeList.appendChild(li);
+      });
+    }
+
+    document.getElementById('add-dest').addEventListener('click', function () {
+      config.destinations = config.destinations || [];
+      config.destinations.push({ id: '', name: '', address: '' });
+      renderDests();
+    });
+
+    document.getElementById('add-route').addEventListener('click', function () {
+      config.routes = config.routes || [];
+      var firstId = (config.destinations && config.destinations[0]) ? config.destinations[0].id : '';
+      config.routes.push({ fromId: firstId, toId: firstId, priceMin: 0, priceMax: 0 });
+      renderRoutes();
+    });
+
+    document.getElementById('add-addon').addEventListener('click', function () {
+      config.addons = config.addons || [];
+      config.addons.push({ id: '', label: '', price: 0, enabled: true });
+      renderAddons();
+    });
+
+    document.getElementById('add-review').addEventListener('click', function () {
+      config.reviews = config.reviews || [];
+      config.reviews.push({ author: '', text: '', stars: 5 });
+      renderReviews();
+    });
+
+    document.getElementById('save-config').addEventListener('click', function () {
+      config.destinations = [];
+      destList.querySelectorAll('li').forEach(function (li) {
+        var idInp = li.querySelector('input[data-field="id"]');
+        var nameInp = li.querySelector('input[data-field="name"]');
+        var addrInp = li.querySelector('input[data-field="address"]');
+        if (idInp && nameInp) {
+          var dest = { id: idInp.value.trim(), name: nameInp.value.trim() };
+          if (addrInp) dest.address = addrInp.value.trim();
+          config.destinations.push(dest);
+        }
+      });
+      config.routes = [];
+      routeList.querySelectorAll('li').forEach(function (li) {
+        var fromSel = li.querySelector('select[data-field="fromId"]');
+        var toSel = li.querySelector('select[data-field="toId"]');
+        var minInp = li.querySelector('input[data-field="priceMin"]');
+        var maxInp = li.querySelector('input[data-field="priceMax"]');
+        if (fromSel && toSel && minInp && maxInp)
+          config.routes.push({ fromId: fromSel.value, toId: toSel.value, priceMin: parseInt(minInp.value, 10) || 0, priceMax: parseInt(maxInp.value, 10) || 0 });
+      });
+      config.overnightSurcharge = parseInt(document.getElementById('fee-overnight').value, 10) || 10;
+      config.overnightSurchargeStart = document.getElementById('surcharge-start').value || '22:00';
+      config.overnightSurchargeEnd = document.getElementById('surcharge-end').value || '06:00';
+      config.roundTripPromo = (document.getElementById('round-trip-promo').value || '').trim() || 'Round trips as low as $100';
+      config.shuttlesMessage = (document.getElementById('shuttles-message').value || '').trim() || 'Shuttles available anytime!';
+      config.googleReviewUrl = (document.getElementById('google-review-url').value || '').trim();
+      config.googleMapsApiKey = (document.getElementById('google-maps-key').value || '').trim();
+      config.reviews = [];
+      if (reviewsListAdmin) {
+        reviewsListAdmin.querySelectorAll('li').forEach(function (li) {
+          var authorInp = li.querySelector('input[data-field="author"]');
+          var textInp = li.querySelector('textarea[data-field="text"]');
+          var starsInp = li.querySelector('input[data-field="stars"]');
+          if (authorInp && textInp) config.reviews.push({
+            author: authorInp.value.trim(),
+            text: textInp.value.trim(),
+            stars: Math.min(5, Math.max(1, parseInt(starsInp.value, 10) || 5))
+          });
+        });
+      }
+      config.addons = [];
+      addonsList.querySelectorAll('li').forEach(function (li) {
+        var idInp = li.querySelector('input[data-field="id"]');
+        var labelInp = li.querySelector('input[data-field="label"]');
+        var priceInp = li.querySelector('input[data-field="price"]');
+        var enabledCb = li.querySelector('input[data-field="enabled"]');
+        if (idInp && labelInp && priceInp)
+          config.addons.push({
+            id: idInp.value.trim(),
+            label: labelInp.value.trim(),
+            price: parseInt(priceInp.value, 10) || 0,
+            enabled: enabledCb ? enabledCb.checked : true
+          });
+      });
+
+      saveStatus.textContent = 'Saving…';
+      fetch(API + '/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+        credentials: 'same-origin'
+      }).then(function (r) {
+        if (!r.ok) throw new Error('Save failed');
+        return r.json();
+      }).then(function () {
+        saveStatus.textContent = 'Saved.';
+        saveStatus.style.color = 'var(--color-primary)';
+      }).catch(function () {
+        saveStatus.textContent = 'Save failed.';
+        saveStatus.style.color = '#c53030';
+      });
+    });
+  </script>
+</body>
+</html>

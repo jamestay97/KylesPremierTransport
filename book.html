@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Your Ride | Premier Transport – Tampa Airport Rides</title>
+  <meta name="description" content="Book airport transportation from Pinellas & Pasco to Tampa (TPA). Reserve your ride online – Premier Transport.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://maps.googleapis.com">
+  <link rel="preconnect" href="https://maps.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="logo"><a href="index.html"><img src="images/logo.png" alt="Premier Transport" class="logo-img">Premier Transport</a></div>
+      <nav>
+        <ul class="nav-list">
+          <li><a href="index.html#how-it-works">How It Works</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
+          <li><a href="index.html#contact">Contact</a></li>
+          <li><a href="policies.html">Policies</a></li>
+          <li><a href="book.html" class="nav-cta">Book Now</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero booking-page">
+      <div class="container">
+        <h1>Book Your Ride</h1>
+        <p class="hero-slogan">Booking Made Simple.</p>
+        <p class="tagline">Reserve airport transportation to or from Tampa International Airport.</p>
+        <a href="tel:+17279994999" class="btn btn-outline">(727) 999-4999</a>
+      </div>
+    </section>
+
+    <p class="booking-availability" id="booking-availability">Shuttles available anytime!</p>
+
+    <div class="booking-form-wrap" id="form-wrap">
+      <div class="notice-box" id="submit-success" style="display: none; margin-bottom: 1.5rem;">
+        Thank you! We’ll confirm your ride by phone or email. If you don’t hear from us within 24 hours, call or text <a href="tel:+17279994999">(727) 999-4999</a>.
+      </div>
+      <form class="booking-form" id="booking-form" action="https://formspree.io/f/xwvnqago" method="POST">
+        <input type="hidden" name="_subject" value="Booking Request - Premier Transport">
+        <input type="hidden" name="_next" value="https://premiertransport.services/book.html?submitted=1">
+        <h2>1. Where & when</h2>
+
+        <div class="address-row">
+          <div class="form-group address-group">
+            <label for="pickup-address">Your address</label>
+            <input type="text" id="pickup-address" name="pickup_address" required placeholder="Street address, city, ZIP">
+          </div>
+          <button type="button" class="swap-addresses-btn" id="swap-addresses-btn" title="Swap pickup and destination">
+            <span class="swap-addresses-icon" aria-hidden="true">⇅</span>
+            <span class="swap-addresses-label">Swap</span>
+          </button>
+          <div class="form-group address-group">
+            <label for="dropoff-dest">Going to</label>
+            <select id="dropoff-dest" name="dropoff_dest" required>
+              <option value="">Select destination</option>
+            </select>
+            <div class="form-group dropoff-other-wrap" id="dropoff-other-wrap" style="display: none;">
+              <label for="dropoff-other-address">Address</label>
+              <input type="text" id="dropoff-other-address" name="dropoff_other_address" placeholder="Street address, city, ZIP">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Pickup date</label>
+            <input type="date" id="pickup-date" name="pickup_date" required>
+          </div>
+          <div class="form-group">
+            <label>Pickup time</label>
+            <input type="time" id="pickup-time" name="pickup_time" required>
+          </div>
+        </div>
+        <p class="form-error pickup-24h-error" id="pickup-24h-error" role="alert" style="display: none;">Appointments made within 24 hours may not be confirmed. Call to confirm at <a href="tel:+17279994999">(727) 999-4999</a>.</p>
+
+        <div class="trip-preview-section" id="trip-preview-section" style="display: none;">
+          <h3 class="trip-preview-title">Trip preview</h3>
+          <p class="form-hint">Route and drive time use your pickup date and time for traffic. In Google Maps you can set “Depart at” to this time for the same estimate.</p>
+          <div id="trip-info" class="trip-info"></div>
+          <div id="trip-map" class="trip-map"></div>
+          <a id="trip-map-link" href="#" target="_blank" rel="noopener" class="trip-map-link" style="display: none;">View route on Google Maps</a>
+        </div>
+
+        <div class="form-group form-check">
+          <input type="checkbox" id="round-trip" name="round_trip" value="1">
+          <label for="round-trip">Round trip (add return ride home)</label>
+        </div>
+
+        <div id="return-fields" style="display: none;">
+          <p class="form-hint">Return trip: we’ll pick you up at the airport and take you back to your address.</p>
+          <div class="form-group">
+            <label for="return-dropoff-address">Return to (your address)</label>
+            <input type="text" id="return-dropoff-address" name="return_dropoff_address" placeholder="Same as your address above" aria-label="Return drop-off address">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Return date</label>
+              <input type="date" id="return-date" name="return_date">
+            </div>
+            <div class="form-group">
+              <label>Return time</label>
+              <input type="time" id="return-time" name="return_time">
+            </div>
+          </div>
+          <div class="trip-preview-section return-trip-preview" id="return-trip-preview-section" style="display: none;">
+            <h3 class="trip-preview-title">Return trip preview</h3>
+            <p class="form-hint">Route and drive time for your return based on the date and time above.</p>
+            <div id="return-trip-info" class="trip-info"></div>
+            <div id="return-trip-map" class="trip-map"></div>
+            <a id="return-trip-map-link" href="#" target="_blank" rel="noopener" class="trip-map-link" style="display: none;">View return route on Google Maps</a>
+          </div>
+        </div>
+
+        <div class="form-row form-row-three">
+          <div class="form-group">
+            <label>Number of passengers</label>
+            <input type="number" id="passengers" name="passengers" min="1" max="5" value="1" required>
+            <p class="form-hint passengers-hint">For more than 5 passengers, please call <a href="tel:+17279994999">(727) 999-4999</a>.</p>
+          </div>
+          <div class="form-group">
+            <label>Airline (optional)</label>
+            <input type="text" id="airline" name="airline" list="airlines-list" placeholder="e.g. Southwest, Delta">
+            <datalist id="airlines-list">
+              <option value="Alaska Airlines">
+              <option value="Allegiant Air">
+              <option value="American Airlines">
+              <option value="Avelo Airlines">
+              <option value="Breeze Airways">
+              <option value="Delta">
+              <option value="Delta Air Lines">
+              <option value="Frontier">
+              <option value="Frontier Airlines">
+              <option value="JetBlue">
+              <option value="JetBlue Airways">
+              <option value="Silver Airways">
+              <option value="Southwest">
+              <option value="Southwest Airlines">
+              <option value="Spirit">
+              <option value="Spirit Airlines">
+              <option value="United">
+              <option value="United Airlines">
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label>Flight number (optional)</label>
+            <input type="text" id="flight-number" name="flight_number" placeholder="e.g. 123">
+          </div>
+        </div>
+
+        <h2>2. Add-ons (optional)</h2>
+        <div class="addons-box" id="addons-box">
+          <h3>Extra charges — add if they apply</h3>
+          <p class="form-hint" id="addons-surcharge-note"></p>
+          <ul class="addons-list" id="addons-list-static" style="display: none;">
+            <li>Car seat or booster: <span class="addon-price">+$10</span> — check below if needed</li>
+          </ul>
+          <div id="addons-container">
+            <div class="form-group form-check" style="margin-bottom: 0;">
+              <input type="checkbox" id="car-seat" name="addon_car_seat" value="1">
+              <label for="car-seat"><strong>Car seat or booster (+$10)</strong></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group form-check">
+          <input type="checkbox" id="special-requests-check" name="special_requests_check" value="1">
+          <label for="special-requests-check">I have special requests (may not be honored)</label>
+        </div>
+        <div class="form-group" id="special-requests-text-wrap" style="display: none;">
+          <label>Special requests</label>
+          <textarea id="special-requests" name="special_requests" rows="2" placeholder="Describe any special requests"></textarea>
+        </div>
+
+        <div class="estimated-price" id="estimated-price" style="display: none;"></div>
+
+        <h2>3. Your contact info</h2>
+
+        <div class="form-group">
+          <label>Your name</label>
+          <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="phone" name="phone" required placeholder="(727) 999-4999">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email" name="email" required placeholder="you@example.com">
+          </div>
+        </div>
+
+        <div class="submit-wrap">
+          <button type="submit" class="btn btn-primary">Submit booking request</button>
+        </div>
+        <p class="disclaimer">We’ll confirm your ride by phone or email. Please answer unknown numbers on your pickup day.</p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <a href="index.html" class="footer-logo">
+        <img src="images/logo.png" alt="Premier Transport" class="footer-logo-img">Premier Transport
+      </a>
+      <div class="footer-legal">
+        © <span id="year"></span> Premier Transport Services. All rights reserved.
+        <a href="policies.html" style="margin-left: 0.5rem;">Policies</a>
+        <a href="privacy.html" style="margin-left: 0.5rem;">Privacy</a>
+        <a href="terms.html" style="margin-left: 0.5rem;">Terms</a>
+        <span class="footer-dev"> · <button type="button" class="footer-dev-link" id="taylor-dev-link">Taylor Dev Studio</button></span>
+      </div>
+      <div>
+        <a href="tel:+17279994999">(727) 999-4999</a> ·
+        <a href="mailto:info@premiertransport.services">info@premiertransport.services</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="taylor-dev-modal" class="taylor-dev-modal" role="dialog" aria-labelledby="taylor-dev-title" aria-modal="true" hidden>
+    <div class="taylor-dev-modal-backdrop"></div>
+    <div class="taylor-dev-modal-content">
+      <button type="button" class="taylor-dev-modal-close" aria-label="Close">&times;</button>
+      <h3 id="taylor-dev-title" class="taylor-dev-modal-title">Taylor Dev Studio</h3>
+      <p class="taylor-dev-modal-tagline">I build digital tools that scale with your business. Since 2015.</p>
+      <p class="taylor-dev-modal-contact">
+        <a href="mailto:jamestay97@gmail.com">jamestay97@gmail.com</a><br>
+        <a href="tel:+17272750698">(727) 275-0698</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/destinations-config.js"></script>
+  <script src="js/booking.js"></script>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script>
+    (function () {
+      var link = document.getElementById('taylor-dev-link');
+      var modal = document.getElementById('taylor-dev-modal');
+      if (!link || !modal) return;
+      var backdrop = modal.querySelector('.taylor-dev-modal-backdrop');
+      var closeBtn = modal.querySelector('.taylor-dev-modal-close');
+      function openModal() { modal.removeAttribute('hidden'); modal.classList.add('taylor-dev-modal-open'); }
+      function closeModal() { modal.setAttribute('hidden', ''); modal.classList.remove('taylor-dev-modal-open'); }
+      link.addEventListener('click', openModal);
+      if (backdrop) backdrop.addEventListener('click', closeModal);
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    })();
+  </script>
+</body>
+</html>

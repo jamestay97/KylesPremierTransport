@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms and Conditions | Premier Transport</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="logo"><a href="index.html"><img src="images/logo.png" alt="Premier Transport" class="logo-img">Premier Transport</a></div>
+      <nav>
+        <ul class="nav-list">
+          <li><a href="index.html#how-it-works">How It Works</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
+          <li><a href="index.html#contact">Contact</a></li>
+          <li><a href="policies.html">Policies</a></li>
+          <li><a href="book.html" class="nav-cta">Book Now</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container" style="max-width: 720px;">
+        <h1>Terms and Conditions</h1>
+        <p><strong>Terms and conditions are not currently active.</strong> A full set of terms may be added in the future.</p>
+        <p>For now, please note that all bookings are subject to confirmation by Premier Transport. We will confirm your ride by phone or email.</p>
+
+        <p style="margin-top: 2rem;"><a href="index.html" class="btn btn-primary">Back to home</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <a href="index.html" class="footer-logo">
+        <img src="images/logo.png" alt="Premier Transport" class="footer-logo-img">Premier Transport
+      </a>
+      <div class="footer-legal">
+        © <span id="year"></span> Premier Transport Services. All rights reserved.
+        <a href="policies.html" style="margin-left: 0.5rem;">Policies</a>
+        <a href="privacy.html" style="margin-left: 0.5rem;">Privacy</a>
+        <a href="terms.html" style="margin-left: 0.5rem;">Terms</a>
+        <span class="footer-dev"> · <button type="button" class="footer-dev-link" id="taylor-dev-link">Taylor Dev Studio</button></span>
+      </div>
+      <div>
+        <a href="tel:+17279994999">(727) 999-4999</a> ·
+        <a href="mailto:info@premiertransport.services">info@premiertransport.services</a>
+      </div>
+    </div>
+  </footer>
+  <div id="taylor-dev-modal" class="taylor-dev-modal" role="dialog" aria-labelledby="taylor-dev-title" aria-modal="true" hidden>
+    <div class="taylor-dev-modal-backdrop"></div>
+    <div class="taylor-dev-modal-content">
+      <button type="button" class="taylor-dev-modal-close" aria-label="Close">&times;</button>
+      <h3 id="taylor-dev-title" class="taylor-dev-modal-title">Taylor Dev Studio</h3>
+      <p class="taylor-dev-modal-tagline">I build digital tools that scale with your business. Since 2015.</p>
+      <p class="taylor-dev-modal-contact">
+        <a href="mailto:jamestay97@gmail.com">jamestay97@gmail.com</a><br>
+        <a href="tel:+17272750698">(727) 275-0698</a>
+      </p>
+    </div>
+  </div>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script>
+    (function () {
+      var link = document.getElementById('taylor-dev-link');
+      var modal = document.getElementById('taylor-dev-modal');
+      if (!link || !modal) return;
+      var backdrop = modal.querySelector('.taylor-dev-modal-backdrop');
+      var closeBtn = modal.querySelector('.taylor-dev-modal-close');
+      function openModal() { modal.removeAttribute('hidden'); modal.classList.add('taylor-dev-modal-open'); }
+      function closeModal() { modal.setAttribute('hidden', ''); modal.classList.remove('taylor-dev-modal-open'); }
+      link.addEventListener('click', openModal);
+      if (backdrop) backdrop.addEventListener('click', closeModal);
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    })();
+  </script>
+</body>
+</html>
