@@ -1280,6 +1280,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) {
   body.home #reviews {
     margin-top: 3rem;
   }
+  /* Show full header image on mobile instead of cropping */
+  .hero {
+    background-size: contain;
+    background-position: center center;
+  }
+  body.home main {
+    background-size: contain;
+    background-position: center top;
+    background-attachment: scroll;
+  }
   body.home .hero {
     min-height: 65vh;
     padding: 2rem 0;
