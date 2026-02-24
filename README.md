@@ -42,6 +42,22 @@ The “What Customers Say” section on the homepage is a placeholder. When you 
 **Option B — Static only**  
 Open `index.html` in a browser or use any static server. The site uses **`js/destinations-config.js`** for locations and prices (edit that file by hand, or run the server once to use admin and then deploy the updated files).
 
+## Split hosting (instant public site, admin on Render)
+
+To avoid Render’s cold start for visitors: serve the **public site** (homepage, book, policies) from a **static host** (e.g. GitHub Pages, Netlify, Cloudflare Pages) and keep the **Node app on Render** only for the admin page and APIs. Then only visiting the admin URL triggers Render’s boot screen.
+
+1. **Deploy the static site**  
+   Deploy this repo to your static host (publish directory: project root). Point your **main domain** (e.g. `premiertransport.services`) at the static host.
+
+2. **Point admin to Render**  
+   Add a subdomain (e.g. `admin.premiertransport.services`) and point it to your Render service (Render’s custom domain docs). The Node app serves `/admin` and all `/api/*` routes.
+
+3. **Booking form backend**  
+   In **`book.html`**, set `window.PremierTransportAPIBase` to your admin origin so the booking form can POST to the backend (e.g. `'https://admin.premiertransport.services'`). Leave it empty (`''`) when the book page is served from Render (same origin).
+
+4. **Syncing config after admin edits**  
+   When you save in admin on Render, the server updates `js/destinations-config.js` on Render’s disk. The static site has its own copy. After saving, update the static site: open or fetch `https://admin.premiertransport.services/js/destinations-config.js`, copy the content into your repo’s `js/destinations-config.js`, commit, and push so the static host redeploys.
+
 ## Files
 
 - `index.html` — Homepage (hero, how it works, **dropdown pricing**, FAQ, contact)

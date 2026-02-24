@@ -1,4 +1,6 @@
 (function () {
+  var apiBase = window.PremierTransportAPIBase || '';
+
   window.gm_authFailure = function () {
     var tripInfoEl = document.getElementById('trip-info');
     if (tripInfoEl) {
@@ -671,7 +673,7 @@
         var nextUrl = (form.querySelector('input[name="_next"]') || {}).value || (window.location.pathname + '?submitted=1');
         var formAction = form.action || '';
 
-        fetch('/api/bookings', {
+        fetch(apiBase + '/api/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -731,7 +733,7 @@
       runWithConfig(window.PremierTransportConfig);
       return;
     }
-    fetch('/api/config')
+    fetch(apiBase + '/api/config')
       .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (c) {
         window.PremierTransportConfig = c;

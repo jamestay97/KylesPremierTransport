@@ -79,6 +79,19 @@ app.use(session({
   cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
+// CORS: allow static site (and localhost) to POST to /api/bookings when using split hosting
+var allowedOrigins = ['https://premiertransport.services', 'https://www.premiertransport.services'];
+app.use(function (req, res, next) {
+  var origin = req.headers.origin;
+  if (origin && (allowedOrigins.indexOf(origin) !== -1 || /^http:\/\/localhost(:\d+)?$/.test(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 app.get('/api/config', function (req, res) {
   res.json(readConfig());
 });
