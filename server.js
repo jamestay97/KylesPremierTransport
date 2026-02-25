@@ -49,6 +49,7 @@ function readConfig() {
     if (c.overnightSurchargeEnd === undefined) c.overnightSurchargeEnd = '06:00';
     if (!Array.isArray(c.reviews)) c.reviews = [];
     if (!Array.isArray(c.notificationEmails)) c.notificationEmails = [];
+    if (!Array.isArray(c.verifiedNotificationEmails)) c.verifiedNotificationEmails = [];
     if (c.roundTripPromo === undefined) c.roundTripPromo = 'Round trips as low as $100';
     if (c.shuttlesMessage === undefined) c.shuttlesMessage = 'Shuttles available anytime!';
     return c;
@@ -62,6 +63,7 @@ function readConfig() {
       shuttlesMessage: 'Shuttles available anytime!',
       addons: [{ id: 'car_seat', label: 'Car seat or booster', price: 10, enabled: true }],
       notificationEmails: [],
+      verifiedNotificationEmails: [],
       destinations: [],
       routes: []
     };
@@ -73,6 +75,7 @@ function writeConfig(config) {
   var jsPath = path.join(__dirname, 'js', 'destinations-config.js');
   var publicConfig = Object.assign({}, config);
   delete publicConfig.notificationEmails;
+  delete publicConfig.verifiedNotificationEmails;
   try {
     fs.writeFileSync(jsPath, 'window.PremierTransportConfig = ' + JSON.stringify(publicConfig) + ';\n', 'utf8');
   } catch (e) {
@@ -82,7 +85,7 @@ function writeConfig(config) {
 
 function sendVerificationEmail(email, baseUrl) {
   if (!RESEND_API_KEY || !email || !baseUrl) return Promise.resolve();
-  var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified';
+  var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified?email=' + encodeURIComponent(email);
   var text = 'You were added to receive Premier Transport booking notifications.\n\nClick the link below to confirm this email is working:\n' + verifyUrl + '\n\nIf you didn\'t expect this, you can ignore this email.';
   return fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -171,6 +174,9 @@ app.post('/api/config', requireAdmin, function (req, res) {
   var current = readConfig();
   var currentEmails = current.notificationEmails || [];
   var newEmails = (config.notificationEmails || []).filter(function (e) { return currentEmails.indexOf(e) === -1; });
+  config.verifiedNotificationEmails = (current.verifiedNotificationEmails || []).filter(function (e) {
+    return (config.notificationEmails || []).indexOf(e) !== -1;
+  });
   var seen = {};
   var baseUrl = (req.protocol || 'https') + '://' + (req.get('host') || '');
   newEmails.forEach(function (email) {
@@ -294,6 +300,17 @@ app.get('/api/bookings', requireAdmin, function (req, res) {
 });
 
 app.get('/email-verified', function (req, res) {
+  var email = (req.query && req.query.email) ? decodeURIComponent(String(req.query.email)).trim().toLowerCase() : '';
+  if (email) {
+    var config = readConfig();
+    var list = config.notificationEmails || [];
+    var verified = config.verifiedNotificationEmails || [];
+    if (list.indexOf(email) !== -1 && verified.indexOf(email) === -1) {
+      verified.push(email);
+      config.verifiedNotificationEmails = verified;
+      writeConfig(config);
+    }
+  }
   res.type('html').send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email verified</title></head><body style="font-family:sans-serif;max-width:480px;margin:2rem auto;padding:0 1rem;"><h1 style="color:#0d3b5c;">You\'re all set</h1><p>This email address is set up to receive Premier Transport booking notifications.</p></body></html>');
 });
 

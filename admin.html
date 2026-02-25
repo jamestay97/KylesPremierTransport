@@ -66,6 +66,9 @@
     .crm-refresh { margin-top: 0.5rem; }
     .crm-customer-details { display: none; }
     .crm-customer-details.show { display: block; }
+    .verify-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; font-size: 0.9rem; font-weight: bold; flex-shrink: 0; }
+    .verify-icon.verify-ok { color: #276749; background: #c6f6d5; }
+    .verify-icon.verify-fail { color: #c53030; background: #fed7d7; }
   </style>
 </head>
 <body>
@@ -167,7 +170,7 @@
 
       <div class="admin-section">
         <h2>Booking notification emails</h2>
-        <p class="form-hint">These addresses receive an email each time someone submits a booking. Add one per line; you can add multiple for your team. Requires <code>RESEND_API_KEY</code> on the server. When you add an email and save, a verification email is sent with a link to confirm it works.</p>
+        <p class="form-hint">These addresses receive an email each time someone submits a booking. Add one per line; you can add multiple for your team. Requires <code>RESEND_API_KEY</code> on the server. When you add an email and save, a verification email is sent with a link to confirm it works. Emails are sent from <strong>Premier Transport &lt;onboarding@resend.dev&gt;</strong> (Resend).</p>
         <p id="verify-email-status" class="save-status" style="min-height:1.5rem;margin-bottom:0.5rem;"></p>
         <ul class="dest-list" id="notification-emails-list"></ul>
         <button type="button" class="btn btn-outline btn-add" id="add-notification-email" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add email</button>
@@ -467,10 +470,14 @@
     function renderNotificationEmails() {
       if (!notificationEmailsList) return;
       var verifyStatus = document.getElementById('verify-email-status');
+      var verifiedList = config.verifiedNotificationEmails || [];
       notificationEmailsList.innerHTML = '';
       (config.notificationEmails || []).forEach(function (email, i) {
+        var isVerified = verifiedList.indexOf(email) !== -1;
+        var icon = isVerified ? '<span class="verify-icon verify-ok" title="Verified" aria-label="Verified">&#10003;</span>' : '<span class="verify-icon verify-fail" title="Not verified" aria-label="Not verified">&#10007;</span>';
         var li = document.createElement('li');
         li.innerHTML = '<input type="email" placeholder="email@example.com" value="' + (email || '').replace(/"/g, '&quot;') + '" data-field="email" style="min-width:220px">' +
+          icon +
           '<button type="button" class="btn btn-outline btn-verify-email" style="font-size:0.85rem;padding:0.35rem 0.6rem;color:var(--color-primary);border-color:var(--color-primary);">Resend verification email</button>' +
           '<button type="button" class="btn-remove">Remove</button>';
         li.querySelector('input').addEventListener('change', function () {
