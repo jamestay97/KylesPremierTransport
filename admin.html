@@ -69,6 +69,13 @@
     .verify-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; font-size: 0.9rem; font-weight: bold; flex-shrink: 0; }
     .verify-icon.verify-ok { color: #276749; background: #c6f6d5; }
     .verify-icon.verify-fail { color: #c53030; background: #fed7d7; }
+    .admin-main-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .admin-main-tab { padding: 0.5rem 1rem; border: 1px solid #cbd5e0; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .admin-main-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .admin-main-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .admin-panel { display: none; }
+    .admin-panel.show { display: block; }
+    .save-bar-sticky { position: sticky; bottom: 0; background: #fff; padding: 1rem 0 1.5rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; z-index: 10; }
   </style>
 </head>
 <body>
@@ -96,7 +103,13 @@
         <a href="https://premiertransport.services">← Back to site</a>
         <button type="button" class="btn btn-outline" id="logout-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Log out</button>
       </div>
+      <div class="admin-main-tabs">
+        <button type="button" class="admin-main-tab active" data-main-tab="crm">CRM</button>
+        <button type="button" class="admin-main-tab" data-main-tab="settings">Settings</button>
+        <button type="button" class="admin-main-tab" data-main-tab="locations">Locations & pricing</button>
+      </div>
 
+      <div id="admin-panel-crm" class="admin-panel show">
       <div class="admin-section crm-section">
         <h2>CRM – Customers & trips</h2>
         <p class="form-hint">Customers from booking form submissions. No duplicates; last ride date and trip summary per customer. Trips are active (upcoming) or completed (past).</p>
@@ -135,7 +148,9 @@
           <button type="button" class="btn btn-outline" id="crm-refresh-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Refresh CRM</button>
         </p>
       </div>
+      </div>
 
+      <div id="admin-panel-settings" class="admin-panel">
       <div class="admin-section">
         <h2>Surcharge timing</h2>
         <p class="form-hint">When a booking’s pickup time falls between these hours, the surcharge amount is added automatically (e.g. 10pm–6am overnight).</p>
@@ -188,7 +203,9 @@
           <input type="text" id="google-maps-key" placeholder="Leave blank to show link only">
         </div>
       </div>
+      </div>
 
+      <div id="admin-panel-locations" class="admin-panel">
       <div class="admin-section">
         <h2>Reviews (show on homepage)</h2>
         <p class="form-hint">Paste reviews from Google (or anywhere). They appear on the homepage with “From Google” attribution. Set the Google review URL above so “See all reviews” links to your listing.</p>
@@ -216,10 +233,13 @@
         <ul class="route-list" id="route-list"></ul>
         <button type="button" class="btn btn-outline btn-add" id="add-route" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add route</button>
       </div>
+      </div>
 
-      <div class="save-bar">
-        <button type="button" class="btn btn-primary" id="save-config">Save changes</button>
-        <p class="save-status" id="save-status"></p>
+      <div class="save-bar-sticky">
+        <div class="save-bar">
+          <button type="button" class="btn btn-primary" id="save-config">Save changes</button>
+          <p class="save-status" id="save-status"></p>
+        </div>
       </div>
     </div>
   </div>
@@ -441,6 +461,16 @@
         document.querySelectorAll('.crm-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
         document.querySelectorAll('.crm-panel').forEach(function (p) { p.classList.remove('show'); });
         var panel = document.getElementById('crm-' + tab);
+        if (panel) panel.classList.add('show');
+      });
+    });
+
+    document.querySelectorAll('.admin-main-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tab = this.dataset.mainTab;
+        document.querySelectorAll('.admin-main-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.mainTab === tab); });
+        document.querySelectorAll('.admin-panel').forEach(function (p) { p.classList.remove('show'); });
+        var panel = document.getElementById('admin-panel-' + tab);
         if (panel) panel.classList.add('show');
       });
     });

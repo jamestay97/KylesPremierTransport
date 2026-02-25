@@ -84,7 +84,9 @@ function writeConfig(config) {
 }
 
 function sendVerificationEmail(email, baseUrl) {
-  if (!RESEND_API_KEY || !email || !baseUrl) return Promise.resolve();
+  if (!RESEND_API_KEY || !email || !baseUrl) {
+    return Promise.reject(new Error('Email not configured. Set RESEND_API_KEY on the server.'));
+  }
   var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified?email=' + encodeURIComponent(email);
   var text = 'You were added to receive Premier Transport booking notifications.\n\nClick the link below to confirm this email is working:\n' + verifyUrl + '\n\nIf you didn\'t expect this, you can ignore this email.';
   return fetch('https://api.resend.com/emails', {
