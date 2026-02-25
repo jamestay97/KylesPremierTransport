@@ -166,6 +166,13 @@
       </div>
 
       <div class="admin-section">
+        <h2>Booking notification emails</h2>
+        <p class="form-hint">These addresses receive an email each time someone submits a booking. Add one per line; you can add multiple for your team. Requires <code>RESEND_API_KEY</code> on the server.</p>
+        <ul class="dest-list" id="notification-emails-list"></ul>
+        <button type="button" class="btn btn-outline btn-add" id="add-notification-email" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add email</button>
+      </div>
+
+      <div class="admin-section">
         <h2>Google review & map</h2>
         <p class="form-hint">Optional: set your Google review link (e.g. from Google Business) and a Maps API key for the booking form trip preview with traffic.</p>
         <div class="form-group">
@@ -230,6 +237,7 @@
     var routeList = document.getElementById('route-list');
     var addonsList = document.getElementById('addons-list');
     var reviewsListAdmin = document.getElementById('reviews-list-admin');
+    var notificationEmailsList = document.getElementById('notification-emails-list');
     var saveStatus = document.getElementById('save-status');
 
     function showLogin() {
@@ -450,7 +458,26 @@
         renderDests();
         renderRoutes();
         renderAddons();
+        renderNotificationEmails();
         renderReviews();
+      });
+    }
+
+    function renderNotificationEmails() {
+      if (!notificationEmailsList) return;
+      notificationEmailsList.innerHTML = '';
+      (config.notificationEmails || []).forEach(function (email, i) {
+        var li = document.createElement('li');
+        li.innerHTML = '<input type="email" placeholder="email@example.com" value="' + (email || '').replace(/"/g, '&quot;') + '" data-field="email" style="min-width:220px">' +
+          '<button type="button" class="btn-remove">Remove</button>';
+        li.querySelector('input').addEventListener('change', function () {
+          config.notificationEmails[i] = this.value.trim().toLowerCase();
+        });
+        li.querySelector('.btn-remove').addEventListener('click', function () {
+          config.notificationEmails.splice(i, 1);
+          renderNotificationEmails();
+        });
+        notificationEmailsList.appendChild(li);
       });
     }
 
@@ -571,6 +598,12 @@
       renderReviews();
     });
 
+    document.getElementById('add-notification-email').addEventListener('click', function () {
+      config.notificationEmails = config.notificationEmails || [];
+      config.notificationEmails.push('');
+      renderNotificationEmails();
+    });
+
     document.getElementById('save-config').addEventListener('click', function () {
       config.destinations = [];
       destList.querySelectorAll('li').forEach(function (li) {
@@ -626,6 +659,16 @@
             enabled: enabledCb ? enabledCb.checked : true
           });
       });
+      config.notificationEmails = [];
+      if (notificationEmailsList) {
+        notificationEmailsList.querySelectorAll('li').forEach(function (li) {
+          var emailInp = li.querySelector('input[data-field="email"]');
+          if (emailInp) {
+            var val = emailInp.value.trim().toLowerCase();
+            if (val) config.notificationEmails.push(val);
+          }
+        });
+      }
 
       saveStatus.textContent = 'Saving…';
       fetch(API + '/api/config', {

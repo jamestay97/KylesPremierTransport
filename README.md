@@ -20,9 +20,24 @@ Default (change in production): email `admin@premiertransport.services`, passwor
 
 When you save in admin, the server updates **`data/config.json`** and **`js/destinations-config.js`**, so the public site (and static hosting) stay in sync.
 
+## Booking notifications (email, and optional text later)
+
+When a customer submits a booking, the server can email you (and others) so you’re alerted right away. Optionally you can add SMS later. Email uses **Resend** (free tier).
+
+**Environment variables for email** (set these on Render so you get notified):
+
+- `RESEND_API_KEY` — API key from [resend.com](https://resend.com) (sign up free; 3,000 emails/month).
+- `NOTIFY_EMAIL` — Email address(es) to receive booking alerts. Use **one** address, or **several separated by commas** (e.g. `you@company.com,partner@company.com,office@company.com`) so multiple people get the same notification.
+
+If these are not set, bookings are still saved and the form works; you just won’t get email alerts.
+
+**Resend setup:** Sign up at resend.com, create an API key, add it as `RESEND_API_KEY`. Set `NOTIFY_EMAIL` to your email, or a comma-separated list for your whole team. Emails are sent from `onboarding@resend.dev` on the free tier.
+
+**SMS (optional, later):** To add text alerts later, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, and `NOTIFY_PHONE` on Render. The server will then also send you an SMS for each booking. You can leave these unset for now.
+
 ## Booking form (Formspree)
 
-The booking form is set up to submit via **Formspree** so submissions go to your email. To activate it:
+The booking form also submits via **Formspree** so you receive a copy by email from Formspree. To activate it:
 
 1. Go to [formspree.io](https://formspree.io) and create an account.
 2. Create a new form and set the notification email to **info@premiertransport.services**.

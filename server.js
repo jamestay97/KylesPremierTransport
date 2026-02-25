@@ -6,6 +6,13 @@ var session = require('express-session');
 var app = express();
 var PORT = process.env.PORT || 3000;
 
+var RESEND_API_KEY = process.env.RESEND_API_KEY;
+var NOTIFY_EMAIL = process.env.NOTIFY_EMAIL;
+var TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+var TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+var TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+var NOTIFY_PHONE = process.env.NOTIFY_PHONE;
+
 var CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 var BOOKINGS_PATH = path.join(__dirname, 'data', 'bookings.json');
 var ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@premiertransport.services';
@@ -41,6 +48,7 @@ function readConfig() {
     if (c.overnightSurchargeStart === undefined) c.overnightSurchargeStart = '22:00';
     if (c.overnightSurchargeEnd === undefined) c.overnightSurchargeEnd = '06:00';
     if (!Array.isArray(c.reviews)) c.reviews = [];
+    if (!Array.isArray(c.notificationEmails)) c.notificationEmails = [];
     if (c.roundTripPromo === undefined) c.roundTripPromo = 'Round trips as low as $100';
     if (c.shuttlesMessage === undefined) c.shuttlesMessage = 'Shuttles available anytime!';
     return c;
@@ -53,6 +61,7 @@ function readConfig() {
       roundTripPromo: 'Round trips as low as $100',
       shuttlesMessage: 'Shuttles available anytime!',
       addons: [{ id: 'car_seat', label: 'Car seat or booster', price: 10, enabled: true }],
+      notificationEmails: [],
       destinations: [],
       routes: []
     };
@@ -62,9 +71,10 @@ function readConfig() {
 function writeConfig(config) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
   var jsPath = path.join(__dirname, 'js', 'destinations-config.js');
-  var js = 'window.PremierTransportConfig = ' + JSON.stringify(config) + ';\n';
+  var publicConfig = Object.assign({}, config);
+  delete publicConfig.notificationEmails;
   try {
-    fs.writeFileSync(jsPath, 'window.PremierTransportConfig = ' + JSON.stringify(config) + ';\n', 'utf8');
+    fs.writeFileSync(jsPath, 'window.PremierTransportConfig = ' + JSON.stringify(publicConfig) + ';\n', 'utf8');
   } catch (e) {
     console.warn('Could not write destinations-config.js:', e.message);
   }
@@ -130,6 +140,7 @@ app.post('/api/config', requireAdmin, function (req, res) {
     googleReviewUrl: body.googleReviewUrl || '',
     googleMapsApiKey: body.googleMapsApiKey || '',
     reviews: Array.isArray(body.reviews) ? body.reviews : [],
+    notificationEmails: Array.isArray(body.notificationEmails) ? body.notificationEmails.filter(function (e) { return typeof e === 'string' && e.trim(); }).map(function (e) { return e.trim().toLowerCase(); }) : [],
     roundTripPromo: typeof body.roundTripPromo === 'string' ? body.roundTripPromo : 'Round trips as low as $100',
     shuttlesMessage: typeof body.shuttlesMessage === 'string' ? body.shuttlesMessage : 'Shuttles available anytime!',
     destinations: body.destinations,
@@ -152,6 +163,60 @@ function isPickupAtLeast24hFromNow(pickupDate, pickupTime) {
   if (isNaN(pickup.getTime())) return false;
   var min = new Date(Date.now() + 24 * 60 * 60 * 1000);
   return pickup.getTime() >= min.getTime();
+}
+
+function formatBookingSummary(r) {
+  var parts = [(r.name || '—') + ' • ' + (r.phone || '—'), r.pickup_date + ' ' + (r.pickup_time || ''), (r.pickup_address || '').substring(0, 40) + (r.pickup_address && r.pickup_address.length > 40 ? '…' : ''), (r.dropoff_dest || r.dropoff_other_address || '—')];
+  return parts.join(' | ');
+}
+
+function notifyNewBooking(record) {
+  var summary = formatBookingSummary(record);
+  var details = [
+    'Name: ' + (record.name || '—'),
+    'Phone: ' + (record.phone || '—'),
+    'Email: ' + (record.email || '—'),
+    'Pickup: ' + (record.pickup_address || '—'),
+    'Drop-off: ' + (record.dropoff_dest || record.dropoff_other_address || '—'),
+    'Date: ' + record.pickup_date + ' ' + (record.pickup_time || ''),
+    'Passengers: ' + (record.passengers || 1),
+    record.round_trip ? 'Round trip: ' + record.return_date + ' ' + (record.return_time || '') : '',
+    record.special_requests ? 'Notes: ' + record.special_requests : ''
+  ].filter(Boolean).join('\n');
+
+  var config = readConfig();
+  var toList = (config.notificationEmails && config.notificationEmails.length) ? config.notificationEmails : (NOTIFY_EMAIL ? NOTIFY_EMAIL.split(',').map(function (e) { return e.trim(); }).filter(Boolean) : []);
+  if (RESEND_API_KEY && toList.length) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + RESEND_API_KEY
+        },
+        body: JSON.stringify({
+          from: 'Premier Transport <onboarding@resend.dev>',
+          to: toList,
+          subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
+          text: details
+        })
+      }).catch(function (err) { console.warn('Resend email failed:', err.message); });
+  }
+
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && NOTIFY_PHONE) {
+    try {
+      var twilio = require('twilio');
+      var client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+      var smsBody = 'New booking: ' + summary.substring(0, 140);
+      if (smsBody.length < summary.length) smsBody += '…';
+      client.messages.create({
+        from: TWILIO_PHONE_NUMBER,
+        to: NOTIFY_PHONE,
+        body: smsBody
+      }).catch(function (err) { console.warn('Twilio SMS failed:', err.message); });
+    } catch (e) {
+      console.warn('Twilio SMS skipped:', e.message);
+    }
+  }
 }
 
 app.post('/api/bookings', function (req, res) {
@@ -187,6 +252,7 @@ app.post('/api/bookings', function (req, res) {
   };
   bookings.push(record);
   writeBookings(bookings);
+  notifyNewBooking(record);
   res.status(201).json({ ok: true, id: id });
 });
 
