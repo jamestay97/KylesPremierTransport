@@ -167,7 +167,8 @@
 
       <div class="admin-section">
         <h2>Booking notification emails</h2>
-        <p class="form-hint">These addresses receive an email each time someone submits a booking. Add one per line; you can add multiple for your team. Requires <code>RESEND_API_KEY</code> on the server.</p>
+        <p class="form-hint">These addresses receive an email each time someone submits a booking. Add one per line; you can add multiple for your team. Requires <code>RESEND_API_KEY</code> on the server. When you add an email and save, a verification email is sent with a link to confirm it works.</p>
+        <p id="verify-email-status" class="save-status" style="min-height:1.5rem;margin-bottom:0.5rem;"></p>
         <ul class="dest-list" id="notification-emails-list"></ul>
         <button type="button" class="btn btn-outline btn-add" id="add-notification-email" style="color: var(--color-primary); border-color: var(--color-primary);">+ Add email</button>
       </div>
@@ -465,10 +466,12 @@
 
     function renderNotificationEmails() {
       if (!notificationEmailsList) return;
+      var verifyStatus = document.getElementById('verify-email-status');
       notificationEmailsList.innerHTML = '';
       (config.notificationEmails || []).forEach(function (email, i) {
         var li = document.createElement('li');
         li.innerHTML = '<input type="email" placeholder="email@example.com" value="' + (email || '').replace(/"/g, '&quot;') + '" data-field="email" style="min-width:220px">' +
+          '<button type="button" class="btn btn-outline btn-verify-email" style="font-size:0.85rem;padding:0.35rem 0.6rem;color:var(--color-primary);border-color:var(--color-primary);">Resend verification email</button>' +
           '<button type="button" class="btn-remove">Remove</button>';
         li.querySelector('input').addEventListener('change', function () {
           config.notificationEmails[i] = this.value.trim().toLowerCase();
@@ -476,6 +479,31 @@
         li.querySelector('.btn-remove').addEventListener('click', function () {
           config.notificationEmails.splice(i, 1);
           renderNotificationEmails();
+        });
+        li.querySelector('.btn-verify-email').addEventListener('click', function () {
+          var emailInp = li.querySelector('input[data-field="email"]');
+          var val = (emailInp && emailInp.value || '').trim().toLowerCase();
+          if (!val) {
+            if (verifyStatus) { verifyStatus.textContent = 'Enter an email and save first.'; verifyStatus.style.color = '#c53030'; }
+            return;
+          }
+          var btn = this;
+          btn.disabled = true;
+          if (verifyStatus) { verifyStatus.textContent = 'Sending…'; verifyStatus.style.color = ''; }
+          fetch(API + '/api/verify-notification-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: val }),
+            credentials: 'same-origin'
+          }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); }).then(function (result) {
+            if (result.ok) {
+              if (verifyStatus) { verifyStatus.textContent = 'Verification email sent.'; verifyStatus.style.color = 'var(--color-primary)'; }
+            } else {
+              if (verifyStatus) { verifyStatus.textContent = result.data.error || 'Email not in notification list. Save the config first.'; verifyStatus.style.color = '#c53030'; }
+            }
+          }).catch(function () {
+            if (verifyStatus) { verifyStatus.textContent = 'Failed to send verification email.'; verifyStatus.style.color = '#c53030'; }
+          }).then(function () { btn.disabled = false; });
         });
         notificationEmailsList.appendChild(li);
       });

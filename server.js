@@ -80,6 +80,28 @@ function writeConfig(config) {
   }
 }
 
+function sendVerificationEmail(email, baseUrl) {
+  if (!RESEND_API_KEY || !email || !baseUrl) return Promise.resolve();
+  var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified';
+  var text = 'You were added to receive Premier Transport booking notifications.\n\nClick the link below to confirm this email is working:\n' + verifyUrl + '\n\nIf you didn\'t expect this, you can ignore this email.';
+  return fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + RESEND_API_KEY
+    },
+    body: JSON.stringify({
+      from: 'Premier Transport <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Verify your Premier Transport booking notifications',
+      text: text
+    })
+  }).then(function (res) {
+    if (!res.ok) return Promise.reject(new Error('Resend failed: ' + res.status));
+    return res;
+  });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -146,6 +168,17 @@ app.post('/api/config', requireAdmin, function (req, res) {
     destinations: body.destinations,
     routes: body.routes
   };
+  var current = readConfig();
+  var currentEmails = current.notificationEmails || [];
+  var newEmails = (config.notificationEmails || []).filter(function (e) { return currentEmails.indexOf(e) === -1; });
+  var seen = {};
+  var baseUrl = (req.protocol || 'https') + '://' + (req.get('host') || '');
+  newEmails.forEach(function (email) {
+    if (email && !seen[email]) {
+      seen[email] = true;
+      sendVerificationEmail(email, baseUrl).catch(function (err) { console.warn('Verification email failed:', err.message); });
+    }
+  });
   writeConfig(config);
   res.json({ ok: true });
 });
@@ -258,6 +291,25 @@ app.post('/api/bookings', function (req, res) {
 
 app.get('/api/bookings', requireAdmin, function (req, res) {
   res.json(readBookings());
+});
+
+app.get('/email-verified', function (req, res) {
+  res.type('html').send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email verified</title></head><body style="font-family:sans-serif;max-width:480px;margin:2rem auto;padding:0 1rem;"><h1 style="color:#0d3b5c;">You\'re all set</h1><p>This email address is set up to receive Premier Transport booking notifications.</p></body></html>');
+});
+
+app.post('/api/verify-notification-email', requireAdmin, function (req, res) {
+  var email = (req.body && req.body.email) ? req.body.email.trim().toLowerCase() : '';
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+  var config = readConfig();
+  var list = config.notificationEmails || [];
+  if (list.indexOf(email) === -1) return res.status(400).json({ error: 'Email not in notification list. Save the config first.' });
+  var baseUrl = (req.protocol || 'https') + '://' + (req.get('host') || '');
+  sendVerificationEmail(email, baseUrl).then(function () {
+    res.json({ ok: true });
+  }).catch(function (err) {
+    console.warn('Verify notification email failed:', err.message);
+    res.status(500).json({ error: 'Failed to send verification email.' });
+  });
 });
 
 app.use(express.static(__dirname, { index: false }));
