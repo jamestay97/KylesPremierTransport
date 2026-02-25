@@ -671,7 +671,6 @@
           payload[key] = value;
         });
         var nextUrl = (form.querySelector('input[name="_next"]') || {}).value || (window.location.pathname + '?submitted=1');
-        var formAction = form.action || '';
 
         fetch(apiBase + '/api/bookings', {
           method: 'POST',
@@ -694,13 +693,6 @@
           return { ok: true };
         }).then(function (res) {
           if (res && !res.ok) return;
-          if (formAction) {
-            return fetch(formAction, { method: 'POST', body: formData }).then(function () {
-              window.location.href = nextUrl;
-            }).catch(function () {
-              window.location.href = nextUrl;
-            });
-          }
           window.location.href = nextUrl;
         });
       });

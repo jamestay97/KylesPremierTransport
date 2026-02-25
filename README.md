@@ -35,15 +35,9 @@ If these are not set, bookings are still saved and the form works; you just won�
 
 **SMS (optional, later):** To add text alerts later, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, and `NOTIFY_PHONE` on Render. The server will then also send you an SMS for each booking. You can leave these unset for now.
 
-## Booking form (Formspree)
+## Booking form
 
-The booking form also submits via **Formspree** so you receive a copy by email from Formspree. To activate it:
-
-1. Go to [formspree.io](https://formspree.io) and create an account.
-2. Create a new form and set the notification email to **info@premiertransport.services**.
-3. Copy your form ID from the form’s action URL (e.g. `https://formspree.io/f/abcdexyz` → the ID is `abcdexyz`).
-4. In **`book.html`**, find `YOUR_FORMSPREE_FORM_ID` in the form `action` attribute and replace it with your form ID.
-5. (Optional) If your site is not at premiertransport.services, update the `_next` hidden input value so customers are redirected back to your booking page with `?submitted=1` after submitting.
+The booking form submits to your backend (Render). Bookings are saved and notification emails are sent via Resend to the addresses you set in **Admin → Booking notification emails**. No Formspree or other third-party form service is used. To change the thank-you redirect URL, edit the `_next` hidden input in `book.html`.
 
 ## Adding reviews later
 
