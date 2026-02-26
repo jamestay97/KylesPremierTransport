@@ -231,7 +231,13 @@ function notifyNewBooking(record) {
   ].filter(Boolean).join('\n');
 
   var config = readConfig();
-  var toList = (config.notificationEmails && config.notificationEmails.length) ? config.notificationEmails : (NOTIFY_EMAIL ? NOTIFY_EMAIL.split(',').map(function (e) { return e.trim(); }).filter(Boolean) : []);
+  var fromConfig = (config.notificationEmails && config.notificationEmails.length) ? config.notificationEmails : [];
+  var fromEnv = NOTIFY_EMAIL ? NOTIFY_EMAIL.split(',').map(function (e) { return e.trim().toLowerCase(); }).filter(Boolean) : [];
+  var seen = {};
+  var toList = [];
+  fromConfig.concat(fromEnv).forEach(function (e) {
+    if (e && !seen[e]) { seen[e] = true; toList.push(e); }
+  });
   if (!toList.length) {
     console.warn('Booking notification skipped: no notification emails configured. Add emails in Admin or set NOTIFY_EMAIL on the server.');
   }
@@ -281,6 +287,24 @@ function notifyNewBooking(record) {
   }
 }
 
+function isDuplicateBooking(bookings, record, windowMinutes) {
+  var cutoff = Date.now() - (windowMinutes || 10) * 60 * 1000;
+  var email = (record.email || '').toLowerCase();
+  var phone = (record.phone || '').trim();
+  var date = (record.pickup_date || '').trim();
+  var time = (record.pickup_time || '').trim();
+  var address = (record.pickup_address || '').trim();
+  for (var i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    var created = new Date(b.createdAt).getTime();
+    if (created < cutoff) continue;
+    var sameContact = (b.email && email && b.email.toLowerCase() === email) || (b.phone && phone && b.phone.trim() === phone);
+    var sameTrip = (b.pickup_date || '').trim() === date && (b.pickup_time || '').trim() === time && (b.pickup_address || '').trim() === address;
+    if (sameContact && sameTrip) return true;
+  }
+  return false;
+}
+
 app.post('/api/bookings', function (req, res) {
   var body = req.body || {};
   if (!isPickupAtLeast24hFromNow(body.pickup_date, body.pickup_time)) {
@@ -312,6 +336,10 @@ app.post('/api/bookings', function (req, res) {
     special_requests: (body.special_requests || '').trim(),
     addon_car_seat: !!body.addon_car_seat
   };
+  if (isDuplicateBooking(bookings, record, 10)) {
+    res.status(201).json({ ok: true, id: id, duplicate: true });
+    return;
+  }
   bookings.push(record);
   writeBookings(bookings);
   notifyNewBooking(record);
