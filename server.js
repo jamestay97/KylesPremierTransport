@@ -102,7 +102,12 @@ function sendVerificationEmail(email, baseUrl) {
       text: text
     })
   }).then(function (res) {
-    if (!res.ok) return Promise.reject(new Error('Resend failed: ' + res.status));
+    if (!res.ok) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        var msg = (body && body.message) ? body.message : ('Resend failed: ' + res.status);
+        return Promise.reject(new Error(msg));
+      });
+    }
     return res;
   });
 }
@@ -227,20 +232,36 @@ function notifyNewBooking(record) {
 
   var config = readConfig();
   var toList = (config.notificationEmails && config.notificationEmails.length) ? config.notificationEmails : (NOTIFY_EMAIL ? NOTIFY_EMAIL.split(',').map(function (e) { return e.trim(); }).filter(Boolean) : []);
+  if (!toList.length) {
+    console.warn('Booking notification skipped: no notification emails configured. Add emails in Admin or set NOTIFY_EMAIL on the server.');
+  }
+  if (!RESEND_API_KEY && toList.length) {
+    console.warn('Booking notification skipped: RESEND_API_KEY not set on the server.');
+  }
   if (RESEND_API_KEY && toList.length) {
-      fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + RESEND_API_KEY
-        },
-        body: JSON.stringify({
-          from: 'Premier Transport <onboarding@resend.dev>',
-          to: toList,
-          subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
-          text: details
-        })
-      }).catch(function (err) { console.warn('Resend email failed:', err.message); });
+    console.log('Booking notification sending to:', toList.join(', '));
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + RESEND_API_KEY
+      },
+      body: JSON.stringify({
+        from: 'Premier Transport <onboarding@resend.dev>',
+        to: toList,
+        subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
+        text: details
+      })
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            console.warn('Resend booking email rejected:', res.status, body.message || body);
+          });
+        }
+        console.log('Resend booking email sent.');
+      })
+      .catch(function (err) { console.warn('Resend booking email failed:', err.message); });
   }
 
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && NOTIFY_PHONE) {
@@ -327,7 +348,7 @@ app.post('/api/verify-notification-email', requireAdmin, function (req, res) {
     res.json({ ok: true });
   }).catch(function (err) {
     console.warn('Verify notification email failed:', err.message);
-    res.status(500).json({ error: 'Failed to send verification email.' });
+    res.status(500).json({ error: err.message || 'Failed to send verification email.' });
   });
 });
 
