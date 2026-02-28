@@ -405,6 +405,50 @@ function sendBookingConfirmationToCustomer(record) {
   }
 }
 
+function buildAdminNotificationEmailHtml(record) {
+  var primary = '#0d3b5c';
+  var accent = '#e8a735';
+  var bg = '#f0f4f8';
+  var cardBg = '#ffffff';
+  var textColor = '#2c3e50';
+  var muted = '#5a6c7d';
+  var radius = '10px';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var pickupAddr = (record.pickup_address || '').trim() || '—';
+  var dropoffDisplay = (record.dropoff_dest || record.dropoff_other_address || '').trim() || '—';
+  var pickupMaps = googleMapsUrl(record.pickup_address);
+  var dropoffMaps = googleMapsUrl(record.dropoff_other_address || record.dropoff_dest);
+  var mapBtn = ' style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;margin-top:6px;"';
+  var pickupBlock = pickupMaps ? '<div style="font-size:15px;color:' + textColor + ';">' + esc(pickupAddr) + '</div><a href="' + esc(pickupMaps) + '"' + mapBtn + '>View on map</a>' : esc(pickupAddr);
+  var dropoffBlock = dropoffMaps ? '<div style="font-size:15px;color:' + textColor + ';">' + esc(dropoffDisplay) + '</div><a href="' + esc(dropoffMaps) + '"' + mapBtn + '>View on map</a>' : esc(dropoffDisplay);
+  var dateTime = (record.pickup_date || '') + (record.pickup_time ? ' at ' + record.pickup_time : '');
+  var specialRequests = (record.special_requests || '').trim();
+  var notesRow = specialRequests
+    ? '<tr><td colspan="2" style="padding:14px 0 0;border-top:1px solid #e8ecf0;"><span style="font-size:12px;text-transform:uppercase;color:' + muted + ';">Notes</span><br><span style="font-size:15px;color:' + textColor + ';">' + esc(specialRequests) + '</span></td></tr>'
+    : '';
+  return (
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
+    '<body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:' + textColor + ';background:' + bg + ';">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';"><tr><td style="padding:32px 20px;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;margin:0 auto;background:' + cardBg + ';border-radius:14px;box-shadow:0 8px 32px rgba(13,59,92,0.12);overflow:hidden;">' +
+    '<tr><td style="background:' + primary + ';color:#fff;padding:24px 26px;font-size:20px;font-weight:700;">New booking – Premier Transport</td></tr>' +
+    '<tr><td style="padding:26px;">' +
+    '<p style="margin:0 0 20px;font-size:17px;font-weight:600;color:' + primary + ';">' + esc(record.name || 'Booking') + ' · ' + esc(record.pickup_date) + '</p>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';border-radius:' + radius + ';border:1px solid #e5e9ee;margin-bottom:16px;">' +
+    '<tr><td style="padding:14px 18px 8px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';">Pickup</span></td></tr><tr><td style="padding:0 18px 16px;">' + pickupBlock + '</td></tr>' +
+    '<tr><td style="padding:0 18px 10px;"><div style="border-left:2px dashed ' + muted + ';height:18px;margin-left:8px;opacity:0.6;"></div></td></tr>' +
+    '<tr><td style="padding:0 18px 8px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';">Drop-off</span></td></tr><tr><td style="padding:0 18px 16px;">' + dropoffBlock + '</td></tr>' +
+    '</table>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;">' +
+    '<tr><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;color:' + muted + ';">Contact</td><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;text-align:right;">' + esc(record.phone || '—') + ' · <a href="mailto:' + esc(record.email || '') + '" style="color:' + primary + ';">' + esc(record.email || '—') + '</a></td></tr>' +
+    '<tr><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;color:' + muted + ';">Date & time</td><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;text-align:right;font-weight:600;">' + esc(dateTime) + '</td></tr>' +
+    '<tr><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;color:' + muted + ';">Passengers</td><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;text-align:right;">' + esc(record.passengers || 1) + '</td></tr>' +
+    (record.round_trip ? '<tr><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;color:' + muted + ';">Round trip return</td><td style="padding:10px 0;border-bottom:1px solid #e8ecf0;text-align:right;">' + esc((record.return_date || '') + (record.return_time ? ' at ' + record.return_time : '')) + '</td></tr>' : '') +
+    notesRow +
+    '</table></td></tr></table></td></tr></table></body></html>'
+  );
+}
+
 function notifyNewBooking(record) {
   var summary = formatBookingSummary(record);
   var details = [
@@ -442,17 +486,16 @@ function notifyNewBooking(record) {
   }
   if (RESEND_API_KEY && toList.length) {
     var subject = 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date;
+    var adminHtml = null;
+    try { adminHtml = buildAdminNotificationEmailHtml(record); } catch (e) { console.warn('[Email] Admin HTML build failed:', e.message); }
     toList.forEach(function (toEmail) {
       console.log('[Email] Sending admin notification to:', toEmail);
       // #region agent log
       debugLog('Resend fetch starting', { to: toEmail }, 'H4');
       // #endregion
-      resendSendEmail({
-        from: RESEND_FROM,
-        to: [toEmail],
-        subject: subject,
-        text: details
-      })
+      var adminPayload = { from: RESEND_FROM, to: [toEmail], subject: subject, text: details };
+      if (adminHtml) adminPayload.html = adminHtml;
+      resendSendEmail(adminPayload)
         .then(function (result) {
           // #region agent log
           debugLog('Resend fetch response', { ok: result.ok, status: result.status, to: toEmail }, 'H4');
@@ -622,4 +665,7 @@ app.listen(PORT, function () {
   console.log('Admin: http://localhost:' + PORT + '/admin');
   console.log('Set ADMIN_EMAIL and ADMIN_PASSWORD in environment to secure login.');
   console.log('[Email] Resend:', RESEND_API_KEY ? 'API key set' : 'RESEND_API_KEY not set — no emails will be sent');
+  if (RESEND_API_KEY && RESEND_FROM.indexOf('onboarding@resend.dev') !== -1) {
+    console.log('[Email] Using default sender — set RESEND_FROM_EMAIL to your verified domain (e.g. noreply@premiertransport.services) so admin notifications reach all NOTIFY_EMAIL addresses.');
+  }
 });

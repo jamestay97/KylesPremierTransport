@@ -4,11 +4,16 @@
   window.gm_authFailure = function () {
     var tripInfoEl = document.getElementById('trip-info');
     if (tripInfoEl) {
-      tripInfoEl.innerHTML = 'Map could not load. Check that your Google API key is valid and that Maps JavaScript API, Places API, and Directions API are enabled in Google Cloud Console. <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener">Google Cloud Console</a>';
+      tripInfoEl.innerHTML = 'Map could not load. See the checklist above the form. <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Open API key settings</a>';
     }
     var hintEl = document.getElementById('maps-key-hint');
     if (hintEl) {
-      hintEl.innerHTML = 'Address suggestions are off: fix the Google Maps API key in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> (enable Maps JavaScript API + Places API, and add your domain under key restrictions). You can still type your address.';
+      hintEl.innerHTML = '<strong>Address suggestions are off.</strong> Fix in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>:<br>' +
+        '1) Open your API key → Application restrictions → <strong>HTTP referrers</strong>.<br>' +
+        '2) Add these exactly (copy‑paste): <code style="background:#eee;padding:2px 6px;">https://premiertransport.services/*</code> and <code style="background:#eee;padding:2px 6px;">https://www.premiertransport.services/*</code><br>' +
+        '3) Enable <strong>Maps JavaScript API</strong>, <strong>Places API</strong>, and <strong>Directions API</strong> in <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener">APIs & Services → Library</a>.<br>' +
+        '4) Ensure <strong>Billing</strong> is enabled for the project (<a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener">Billing</a>).<br>' +
+        '5) Save and wait 1–2 minutes, then refresh. You can still type your address manually.';
       hintEl.style.display = 'block';
     }
   };
