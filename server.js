@@ -1,5 +1,6 @@
 var path = require('path');
 var fs = require('fs');
+var https = require('https');
 var express = require('express');
 var session = require('express-session');
 
@@ -98,32 +99,55 @@ function writeConfig(config) {
   }
 }
 
+function resendSendEmail(payload) {
+  return new Promise(function (resolve, reject) {
+    if (!RESEND_API_KEY) {
+      reject(new Error('RESEND_API_KEY not set'));
+      return;
+    }
+    var body = JSON.stringify(payload);
+    var req = https.request({
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + RESEND_API_KEY,
+        'Content-Length': Buffer.byteLength(body, 'utf8')
+      }
+    }, function (res) {
+      var chunks = [];
+      res.on('data', function (chunk) { chunks.push(chunk); });
+      res.on('end', function () {
+        var raw = chunks.join('');
+        var data = null;
+        try { data = JSON.parse(raw); } catch (e) {}
+        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, body: data });
+      });
+    });
+    req.on('error', reject);
+    req.write(body, 'utf8');
+    req.end();
+  });
+}
+
 function sendVerificationEmail(email, baseUrl) {
   if (!RESEND_API_KEY || !email || !baseUrl) {
     return Promise.reject(new Error('Email not configured. Set RESEND_API_KEY on the server.'));
   }
   var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified?email=' + encodeURIComponent(email);
   var text = 'You were added to receive Premier Transport booking notifications.\n\nClick the link below to confirm this email is working:\n' + verifyUrl + '\n\nIf you didn\'t expect this, you can ignore this email.';
-  return fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + RESEND_API_KEY
-    },
-    body: JSON.stringify({
-      from: 'Premier Transport <onboarding@resend.dev>',
-      to: [email],
-      subject: 'Verify your Premier Transport booking notifications',
-      text: text
-    })
-  }).then(function (res) {
-    if (!res.ok) {
-      return res.json().catch(function () { return {}; }).then(function (body) {
-        var msg = (body && body.message) ? body.message : ('Resend failed: ' + res.status);
-        return Promise.reject(new Error(msg));
-      });
+  return resendSendEmail({
+    from: 'Premier Transport <onboarding@resend.dev>',
+    to: [email],
+    subject: 'Verify your Premier Transport booking notifications',
+    text: text
+  }).then(function (result) {
+    if (!result.ok) {
+      var msg = (result.body && result.body.message) ? result.body.message : ('Resend failed: ' + result.status);
+      return Promise.reject(new Error(msg));
     }
-    return res;
+    return result;
   });
 }
 
@@ -331,30 +355,23 @@ function sendBookingConfirmationToCustomer(record) {
     text: text
   };
   if (html) payload.html = html;
-  fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + RESEND_API_KEY
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(function (res) {
+  console.log('[Email] Sending customer confirmation to', to);
+  resendSendEmail(payload)
+    .then(function (result) {
       // #region agent log
-      debugLog('Resend confirmation response', { ok: res.ok, status: res.status }, 'customer-confirm');
+      debugLog('Resend confirmation response', { ok: result.ok, status: result.status }, 'customer-confirm');
       // #endregion
-      if (!res.ok) {
-        return res.json().catch(function () { return {}; }).then(function (body) {
-          console.warn('Resend confirmation email rejected:', res.status, body.message || body);
-        });
+      if (!result.ok) {
+        console.warn('[Email] Resend rejection:', result.status, result.body && result.body.message ? result.body.message : result.body);
+        return;
       }
-      console.log('Booking confirmation email sent to customer.');
+      console.log('[Email] Customer confirmation sent to', to);
     })
     .catch(function (err) {
       // #region agent log
       debugLog('Resend confirmation error', { message: (err && err.message) || String(err) }, 'customer-confirm');
       // #endregion
-      console.warn('Resend confirmation email failed:', err.message);
+      console.warn('[Email] Resend failed:', err.message);
     });
   } catch (err) {
     console.warn('sendBookingConfirmationToCustomer error:', err.message);
@@ -394,39 +411,31 @@ function notifyNewBooking(record) {
     console.warn('Booking notification skipped: RESEND_API_KEY not set on the server.');
   }
   if (RESEND_API_KEY && toList.length) {
-    console.log('Booking notification sending to:', toList.join(', '));
+    console.log('[Email] Sending admin notification to:', toList.join(', '));
     // #region agent log
     debugLog('Resend fetch starting', {}, 'H4');
     // #endregion
-    fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + RESEND_API_KEY
-      },
-      body: JSON.stringify({
-        from: 'Premier Transport <onboarding@resend.dev>',
-        to: toList,
-        subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
-        text: details
-      })
+    resendSendEmail({
+      from: 'Premier Transport <onboarding@resend.dev>',
+      to: toList,
+      subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
+      text: details
     })
-      .then(function (res) {
+      .then(function (result) {
         // #region agent log
-        debugLog('Resend fetch response', { ok: res.ok, status: res.status }, 'H4');
+        debugLog('Resend fetch response', { ok: result.ok, status: result.status }, 'H4');
         // #endregion
-        if (!res.ok) {
-          return res.json().catch(function () { return {}; }).then(function (body) {
-            console.warn('Resend booking email rejected:', res.status, body.message || body);
-          });
+        if (!result.ok) {
+          console.warn('[Email] Resend admin notification rejected:', result.status, result.body && result.body.message ? result.body.message : result.body);
+          return;
         }
-        console.log('Resend booking email sent.');
+        console.log('[Email] Admin notification sent.');
       })
       .catch(function (err) {
         // #region agent log
         debugLog('Resend fetch error', { message: (err && err.message) || String(err) }, 'H5');
         // #endregion
-        console.warn('Resend booking email failed:', err.message);
+        console.warn('[Email] Resend admin notification failed:', err.message);
       });
   }
 
@@ -569,4 +578,5 @@ app.listen(PORT, function () {
   console.log('Premier Transport server at http://localhost:' + PORT);
   console.log('Admin: http://localhost:' + PORT + '/admin');
   console.log('Set ADMIN_EMAIL and ADMIN_PASSWORD in environment to secure login.');
+  console.log('[Email] Resend:', RESEND_API_KEY ? 'API key set' : 'RESEND_API_KEY not set — no emails will be sent');
 });

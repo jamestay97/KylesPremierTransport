@@ -67,6 +67,15 @@ To avoid Render’s cold start for visitors: serve the **public site** (homepage
 4. **Syncing config after admin edits**  
    When you save in admin on Render, the server updates `js/destinations-config.js` on Render’s disk. The static site has its own copy. After saving, update the static site: open or fetch `https://admin.premiertransport.services/js/destinations-config.js`, copy the content into your repo’s `js/destinations-config.js`, commit, and push so the static host redeploys.
 
+## Deploying updates (GitHub Pages + Render)
+
+- **Render (API/admin):** Push to the branch Render is connected to (e.g. `main`). Render will build and deploy automatically.
+- **GitHub Pages (premiertransport.services):** Pages builds from the branch and folder set in the repo (e.g. **Settings → Pages → Source**: branch `main` / root). If the site didn’t update after a push:
+  1. Confirm you pushed to that branch (e.g. `git push origin main`).
+  2. In GitHub: **Settings → Pages** → under “Build and deployment”, click **Save** (no need to change anything) to trigger a new build.
+  3. Wait a minute or two and hard-refresh the site (Ctrl+F5 or Cmd+Shift+R).
+  4. If it still shows old content, check **Actions** for a failed “pages build and deployment” workflow.
+
 ## Files
 
 - `index.html` — Homepage (hero, how it works, **dropdown pricing**, FAQ, contact)
