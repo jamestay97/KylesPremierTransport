@@ -426,6 +426,7 @@
       }
     }
 
+    var MAPS_CALLBACK_NAME = '__premierTransportMapsReady';
     function loadMapsScriptForAutocomplete() {
       var apiKey = config.googleMapsApiKey || '';
       if (!apiKey) return;
@@ -437,17 +438,31 @@
       }
       if (window._gmapsLoading) return;
       window._gmapsLoading = true;
-      var s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_gmapsAutocompleteCallback';
-      s.async = true;
-      s.defer = true;
-      window._gmapsAutocompleteCallback = function () {
+      window[MAPS_CALLBACK_NAME] = function () {
         window._gmapsLoading = false;
+        try { delete window[MAPS_CALLBACK_NAME]; } catch (e) {}
         initPlacesAutocomplete();
         initReturnPlacesAutocomplete();
         initDropoffOtherPlacesAutocomplete();
       };
+      setTimeout(function () {
+        if (window._gmapsLoading && !window.google) window._gmapsLoading = false;
+      }, 8000);
+      var s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=' + MAPS_CALLBACK_NAME;
+      s.async = true;
+      s.defer = true;
+      s.onerror = function () { window._gmapsLoading = false; };
       document.head.appendChild(s);
+    }
+    function tryAttachAutocompleteOnFocus() {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        initPlacesAutocomplete();
+        initReturnPlacesAutocomplete();
+        if (dropoffSelect && dropoffSelect.value === 'other') initDropoffOtherPlacesAutocomplete();
+      } else if (config.googleMapsApiKey && !window._gmapsLoading) {
+        loadMapsScriptForAutocomplete();
+      }
     }
 
     function buildDepartureDate() {
@@ -545,18 +560,20 @@
         tripInfoEl.textContent = 'Loading map…';
         if (!window._gmapsLoading) {
           window._gmapsLoading = true;
-          var s = document.createElement('script');
-          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_gmapsTripCallback';
-          s.async = true;
-          s.defer = true;
-          window._gmapsTripCallback = function () {
+          window[MAPS_CALLBACK_NAME] = function () {
             window._gmapsLoading = false;
+            try { delete window[MAPS_CALLBACK_NAME]; } catch (e) {}
             initPlacesAutocomplete();
             initReturnPlacesAutocomplete();
             initDropoffOtherPlacesAutocomplete();
             updateTripPreview();
             updateReturnTripPreview();
           };
+          var s = document.createElement('script');
+          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=' + MAPS_CALLBACK_NAME;
+          s.async = true;
+          s.defer = true;
+          s.onerror = function () { window._gmapsLoading = false; };
           document.head.appendChild(s);
         }
       } else {
@@ -661,6 +678,7 @@
     if (pickupAddress) {
       pickupAddress.addEventListener('input', onTripInputsChange);
       pickupAddress.addEventListener('change', onTripInputsChange);
+      pickupAddress.addEventListener('focus', tryAttachAutocompleteOnFocus);
     }
     if (pickupDateEl) {
       pickupDateEl.addEventListener('change', onTripInputsChange);
@@ -673,12 +691,14 @@
     if (dropoffOtherInput) {
       dropoffOtherInput.addEventListener('input', onTripInputsChange);
       dropoffOtherInput.addEventListener('change', onTripInputsChange);
+      dropoffOtherInput.addEventListener('focus', tryAttachAutocompleteOnFocus);
     }
     if (returnDateEl) returnDateEl.addEventListener('change', onReturnTripInputsChange);
     if (returnTimeEl) returnTimeEl.addEventListener('change', onReturnTripInputsChange);
     if (returnDropoffDisplay) {
       returnDropoffDisplay.addEventListener('input', onReturnTripInputsChange);
       returnDropoffDisplay.addEventListener('change', onReturnTripInputsChange);
+      returnDropoffDisplay.addEventListener('focus', tryAttachAutocompleteOnFocus);
     }
 
     var form = document.getElementById('booking-form');

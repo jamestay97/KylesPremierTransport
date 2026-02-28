@@ -189,6 +189,10 @@ app.get('/api/config', function (req, res) {
   res.json(readConfig());
 });
 
+app.get('/api/email-status', function (req, res) {
+  res.json({ resendConfigured: !!RESEND_API_KEY, notifyConfigured: !!(NOTIFY_EMAIL && NOTIFY_EMAIL.trim()) });
+});
+
 app.post('/api/login', function (req, res) {
   var email = (req.body.email || '').trim().toLowerCase();
   var password = req.body.password || '';
