@@ -7,15 +7,17 @@ var session = require('express-session');
 // #region agent log
 var DEBUG_LOG_PATH = path.join(__dirname, 'debug-ea39b2.log');
 function debugLog(message, data, hypothesisId) {
-  var line = JSON.stringify({
+  var payload = {
     sessionId: 'ea39b2',
     timestamp: Date.now(),
     location: 'server.js',
     message: message,
     data: data || {},
     hypothesisId: hypothesisId || ''
-  }) + '\n';
+  };
+  var line = JSON.stringify(payload) + '\n';
   try { fs.appendFileSync(DEBUG_LOG_PATH, line, 'utf8'); } catch (e) {}
+  console.log('[Debug]', message, JSON.stringify(payload.data), hypothesisId ? '(' + hypothesisId + ')' : '');
 }
 // #endregion
 
