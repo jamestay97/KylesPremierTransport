@@ -240,7 +240,7 @@ function buildConfirmationEmailHtml(record) {
   var primary = '#0d3b5c';
   var accent = '#e8a735';
   var bg = '#f8f9fa';
-  var text = '#2c3e50';
+  var textColor = '#2c3e50';
   var muted = '#5a6c7d';
   var white = '#ffffff';
   var radius = '8px';
@@ -250,11 +250,11 @@ function buildConfirmationEmailHtml(record) {
   var dropoffMaps = googleMapsUrl(record.dropoff_other_address || record.dropoff_dest);
   var specialRequests = (record.special_requests || '').trim();
   var name = record.name || 'there';
-  var dateTime = record.pickup_date + (record.pickup_time ? ' at ' + record.pickup_time : '');
-  var passengers = record.passengers || 1;
+  var dateTime = (record.pickup_date || '') + (record.pickup_time ? ' at ' + record.pickup_time : '');
+  var passengers = record.passengers != null ? record.passengers : 1;
   var roundTrip = record.round_trip && (record.return_date || record.return_time);
   var returnDateTime = (record.return_date || '') + (record.return_time ? ' at ' + record.return_time : '');
-  var esc = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var pickupLink = pickupMaps
     ? '<a href="' + esc(pickupMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(pickupAddr) + '</a> &nbsp;<a href="' + esc(pickupMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
     : esc(pickupAddr);
@@ -262,10 +262,10 @@ function buildConfirmationEmailHtml(record) {
     ? '<a href="' + esc(dropoffMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(dropoffDisplay) + '</a> &nbsp;<a href="' + esc(dropoffMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
     : esc(dropoffDisplay);
   var notesBubble = specialRequests
-    ? '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;"><tr><td style="background:#fff8e8;border-left:4px solid ' + accent + ';padding:14px 16px;border-radius:' + radius + ';font-size:14px;line-height:1.5;color:' + text + ';"><strong style="color:' + primary + ';">Notes / special requests</strong><br>' + esc(specialRequests) + '</td></tr></table>'
+    ? '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;"><tr><td style="background:#fff8e8;border-left:4px solid ' + accent + ';padding:14px 16px;border-radius:' + radius + ';font-size:14px;line-height:1.5;color:' + textColor + ';"><strong style="color:' + primary + ';">Notes / special requests</strong><br>' + esc(specialRequests) + '</td></tr></table>'
     : '';
   return (
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.5;color:' + text + ';background:' + bg + ';">' +
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.5;color:' + textColor + ';background:' + bg + ';">' +
     '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';"><tr><td style="padding:24px 16px;">' +
     '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:' + white + ';border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden;">' +
     '<tr><td style="background:' + primary + ';color:' + white + ';padding:20px 24px;font-size:20px;font-weight:700;">Premier Transport</td></tr>' +
@@ -290,12 +290,13 @@ function buildConfirmationEmailHtml(record) {
 }
 
 function sendBookingConfirmationToCustomer(record) {
-  var to = (record.email || '').trim().toLowerCase();
-  // #region agent log
-  debugLog('sendBookingConfirmationToCustomer', { hasTo: !!to, hasResendKey: !!RESEND_API_KEY }, 'customer-confirm');
-  // #endregion
-  if (!to || !RESEND_API_KEY) return;
-  var lines = [
+  try {
+    var to = (record.email || '').trim().toLowerCase();
+    // #region agent log
+    debugLog('sendBookingConfirmationToCustomer', { hasTo: !!to, hasResendKey: !!RESEND_API_KEY }, 'customer-confirm');
+    // #endregion
+    if (!to || !RESEND_API_KEY) return;
+    var lines = [
     'Hi ' + (record.name || 'there') + ',',
     '',
     'We received your booking request with Premier Transport. Here are your details:',
@@ -317,20 +318,26 @@ function sendBookingConfirmationToCustomer(record) {
   lines.push('');
   lines.push('— Premier Transport');
   var text = lines.join('\n');
-  var html = buildConfirmationEmailHtml(record);
+  var html = null;
+  try {
+    html = buildConfirmationEmailHtml(record);
+  } catch (err) {
+    console.warn('Booking confirmation HTML build failed, sending text only:', err.message);
+  }
+  var payload = {
+    from: 'Premier Transport <onboarding@resend.dev>',
+    to: [to],
+    subject: 'Booking request received – ' + record.pickup_date + ' ' + (record.pickup_time || ''),
+    text: text
+  };
+  if (html) payload.html = html;
   fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + RESEND_API_KEY
     },
-    body: JSON.stringify({
-      from: 'Premier Transport <onboarding@resend.dev>',
-      to: [to],
-      subject: 'Booking request received – ' + record.pickup_date + ' ' + (record.pickup_time || ''),
-      text: text,
-      html: html
-    })
+    body: JSON.stringify(payload)
   })
     .then(function (res) {
       // #region agent log
@@ -349,6 +356,9 @@ function sendBookingConfirmationToCustomer(record) {
       // #endregion
       console.warn('Resend confirmation email failed:', err.message);
     });
+  } catch (err) {
+    console.warn('sendBookingConfirmationToCustomer error:', err.message);
+  }
 }
 
 function notifyNewBooking(record) {
@@ -367,7 +377,7 @@ function notifyNewBooking(record) {
 
   var config = readConfig();
   var fromConfig = (config.notificationEmails && config.notificationEmails.length) ? config.notificationEmails : [];
-  var fromEnv = NOTIFY_EMAIL ? NOTIFY_EMAIL.split(',').map(function (e) { return e.trim().toLowerCase(); }).filter(Boolean) : [];
+  var fromEnv = NOTIFY_EMAIL ? NOTIFY_EMAIL.split(/[,\n]+/).map(function (e) { return e.trim().toLowerCase(); }).filter(Boolean) : [];
   var seen = {};
   var toList = [];
   fromConfig.concat(fromEnv).forEach(function (e) {
