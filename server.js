@@ -101,6 +101,9 @@ function writeConfig(config) {
 
 function resendSendEmail(payload) {
   return new Promise(function (resolve, reject) {
+    // #region agent log
+    debugLog('resendSendEmail entry', { hasKey: !!RESEND_API_KEY, toCount: payload && payload.to ? payload.to.length : 0 }, 'H1');
+    // #endregion
     if (!RESEND_API_KEY) {
       reject(new Error('RESEND_API_KEY not set'));
       return;
@@ -122,10 +125,19 @@ function resendSendEmail(payload) {
         var raw = chunks.join('');
         var data = null;
         try { data = JSON.parse(raw); } catch (e) {}
-        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, body: data });
+        var ok = res.statusCode >= 200 && res.statusCode < 300;
+        // #region agent log
+        debugLog('resendSendEmail response', { ok: ok, status: res.statusCode, bodyMessage: data && data.message }, 'H4');
+        // #endregion
+        resolve({ ok: ok, status: res.statusCode, body: data });
       });
     });
-    req.on('error', reject);
+    req.on('error', function (err) {
+      // #region agent log
+      debugLog('resendSendEmail network error', { message: (err && err.message) || String(err) }, 'H4');
+      // #endregion
+      reject(err);
+    });
     req.write(body, 'utf8');
     req.end();
   });
@@ -319,7 +331,12 @@ function sendBookingConfirmationToCustomer(record) {
     // #region agent log
     debugLog('sendBookingConfirmationToCustomer', { hasTo: !!to, hasResendKey: !!RESEND_API_KEY }, 'customer-confirm');
     // #endregion
-    if (!to || !RESEND_API_KEY) return;
+    if (!to || !RESEND_API_KEY) {
+      // #region agent log
+      debugLog('sendBookingConfirmationToCustomer skipped', { reason: !to ? 'noTo' : 'noKey', hasTo: !!to, hasKey: !!RESEND_API_KEY }, 'H5');
+      // #endregion
+      return;
+    }
     var lines = [
     'Hi ' + (record.name || 'there') + ',',
     '',
@@ -405,6 +422,9 @@ function notifyNewBooking(record) {
   debugLog('notifyNewBooking RESEND_API_KEY check', { hasKey: !!RESEND_API_KEY }, 'H2');
   // #endregion
   if (!toList.length) {
+    // #region agent log
+    debugLog('notifyNewBooking skipped', { reason: 'toListEmpty', toListLength: 0 }, 'H1');
+    // #endregion
     console.warn('Booking notification skipped: no notification emails configured. Add emails in Admin or set NOTIFY_EMAIL on the server.');
   }
   if (!RESEND_API_KEY && toList.length) {
@@ -513,11 +533,17 @@ app.post('/api/bookings', function (req, res) {
   debugLog('duplicate check', { isDuplicate: isDup }, 'H3');
   // #endregion
   if (isDup) {
+    // #region agent log
+    debugLog('POST /api/bookings returning duplicate (no emails)', {}, 'H3');
+    // #endregion
     res.status(201).json({ ok: true, id: id, duplicate: true });
     return;
   }
   bookings.push(record);
   writeBookings(bookings);
+  // #region agent log
+  debugLog('before sendEmail', { recordEmail: !!(record.email && record.email.trim()) }, 'H2');
+  // #endregion
   sendBookingConfirmationToCustomer(record);
   notifyNewBooking(record);
   // #region agent log

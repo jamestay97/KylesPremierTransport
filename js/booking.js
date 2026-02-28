@@ -48,6 +48,7 @@
         dropoffOtherInput.required = isOther;
         if (!isOther) dropoffOtherInput.value = '';
       }
+      if (isOther) initDropoffOtherPlacesAutocomplete();
       onTripInputsChange();
       updateEstimatedPrice();
     }
@@ -368,22 +369,29 @@
     var swapBtn = document.getElementById('swap-addresses-btn');
     if (swapBtn) swapBtn.addEventListener('click', swapAddresses);
 
+    var autocompleteOptions = {
+      types: ['address', 'establishment'],
+      fields: ['formatted_address', 'name'],
+      componentRestrictions: { country: 'us' }
+    };
+
+    function setAddressFromPlace(input, place, onChanged) {
+      if (!place) return;
+      var addr = place.formatted_address || (place.name ? place.name + (place.vicinity ? ', ' + place.vicinity : '') : '');
+      if (addr) {
+        input.value = addr;
+        if (onChanged) onChanged();
+      }
+    }
+
     function initPlacesAutocomplete() {
       if (!pickupAddress || !window.google || !window.google.maps || !window.google.maps.places) return;
       if (pickupAddress._autocompleteAttached) return;
       try {
         pickupAddress._autocompleteAttached = true;
-        var autocomplete = new google.maps.places.Autocomplete(pickupAddress, {
-          types: ['address'],
-          fields: ['formatted_address'],
-          componentRestrictions: { country: 'us' }
-        });
+        var autocomplete = new google.maps.places.Autocomplete(pickupAddress, autocompleteOptions);
         autocomplete.addListener('place_changed', function () {
-          var place = autocomplete.getPlace();
-          if (place && place.formatted_address) {
-            pickupAddress.value = place.formatted_address;
-            onTripInputsChange();
-          }
+          setAddressFromPlace(pickupAddress, autocomplete.getPlace(), onTripInputsChange);
         });
       } catch (e) {
         pickupAddress._autocompleteAttached = false;
@@ -395,21 +403,51 @@
       if (returnDropoffDisplay._autocompleteAttached) return;
       try {
         returnDropoffDisplay._autocompleteAttached = true;
-        var autocomplete = new google.maps.places.Autocomplete(returnDropoffDisplay, {
-          types: ['address'],
-          fields: ['formatted_address'],
-          componentRestrictions: { country: 'us' }
-        });
+        var autocomplete = new google.maps.places.Autocomplete(returnDropoffDisplay, autocompleteOptions);
         autocomplete.addListener('place_changed', function () {
-          var place = autocomplete.getPlace();
-          if (place && place.formatted_address) {
-            returnDropoffDisplay.value = place.formatted_address;
-            onReturnTripInputsChange();
-          }
+          setAddressFromPlace(returnDropoffDisplay, autocomplete.getPlace(), onReturnTripInputsChange);
         });
       } catch (e) {
         returnDropoffDisplay._autocompleteAttached = false;
       }
+    }
+
+    function initDropoffOtherPlacesAutocomplete() {
+      if (!dropoffOtherInput || !window.google || !window.google.maps || !window.google.maps.places) return;
+      if (dropoffOtherInput._autocompleteAttached) return;
+      try {
+        dropoffOtherInput._autocompleteAttached = true;
+        var autocomplete = new google.maps.places.Autocomplete(dropoffOtherInput, autocompleteOptions);
+        autocomplete.addListener('place_changed', function () {
+          setAddressFromPlace(dropoffOtherInput, autocomplete.getPlace(), onTripInputsChange);
+        });
+      } catch (e) {
+        dropoffOtherInput._autocompleteAttached = false;
+      }
+    }
+
+    function loadMapsScriptForAutocomplete() {
+      var apiKey = config.googleMapsApiKey || '';
+      if (!apiKey) return;
+      if (window.google && window.google.maps && window.google.maps.places) {
+        initPlacesAutocomplete();
+        initReturnPlacesAutocomplete();
+        initDropoffOtherPlacesAutocomplete();
+        return;
+      }
+      if (window._gmapsLoading) return;
+      window._gmapsLoading = true;
+      var s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_gmapsAutocompleteCallback';
+      s.async = true;
+      s.defer = true;
+      window._gmapsAutocompleteCallback = function () {
+        window._gmapsLoading = false;
+        initPlacesAutocomplete();
+        initReturnPlacesAutocomplete();
+        initDropoffOtherPlacesAutocomplete();
+      };
+      document.head.appendChild(s);
     }
 
     function buildDepartureDate() {
@@ -514,6 +552,8 @@
           window._gmapsTripCallback = function () {
             window._gmapsLoading = false;
             initPlacesAutocomplete();
+            initReturnPlacesAutocomplete();
+            initDropoffOtherPlacesAutocomplete();
             updateTripPreview();
             updateReturnTripPreview();
           };
@@ -746,6 +786,7 @@
       });
     }
 
+    loadMapsScriptForAutocomplete();
     toggleDropoffOther();
     applyMinDates();
     updateEstimatedPrice();
