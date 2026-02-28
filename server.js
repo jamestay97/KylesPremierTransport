@@ -231,6 +231,64 @@ function formatBookingSummary(r) {
   return parts.join(' | ');
 }
 
+function googleMapsUrl(address) {
+  if (!address || !String(address).trim()) return null;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(String(address).trim());
+}
+
+function buildConfirmationEmailHtml(record) {
+  var primary = '#0d3b5c';
+  var accent = '#e8a735';
+  var bg = '#f8f9fa';
+  var text = '#2c3e50';
+  var muted = '#5a6c7d';
+  var white = '#ffffff';
+  var radius = '8px';
+  var pickupAddr = (record.pickup_address || '').trim() || '—';
+  var dropoffDisplay = (record.dropoff_dest || record.dropoff_other_address || '').trim() || '—';
+  var pickupMaps = googleMapsUrl(record.pickup_address);
+  var dropoffMaps = googleMapsUrl(record.dropoff_other_address || record.dropoff_dest);
+  var specialRequests = (record.special_requests || '').trim();
+  var name = record.name || 'there';
+  var dateTime = record.pickup_date + (record.pickup_time ? ' at ' + record.pickup_time : '');
+  var passengers = record.passengers || 1;
+  var roundTrip = record.round_trip && (record.return_date || record.return_time);
+  var returnDateTime = (record.return_date || '') + (record.return_time ? ' at ' + record.return_time : '');
+  var esc = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var pickupLink = pickupMaps
+    ? '<a href="' + esc(pickupMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(pickupAddr) + '</a> &nbsp;<a href="' + esc(pickupMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
+    : esc(pickupAddr);
+  var dropoffLink = dropoffMaps
+    ? '<a href="' + esc(dropoffMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(dropoffDisplay) + '</a> &nbsp;<a href="' + esc(dropoffMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
+    : esc(dropoffDisplay);
+  var notesBubble = specialRequests
+    ? '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;"><tr><td style="background:#fff8e8;border-left:4px solid ' + accent + ';padding:14px 16px;border-radius:' + radius + ';font-size:14px;line-height:1.5;color:' + text + ';"><strong style="color:' + primary + ';">Notes / special requests</strong><br>' + esc(specialRequests) + '</td></tr></table>'
+    : '';
+  return (
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.5;color:' + text + ';background:' + bg + ';">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';"><tr><td style="padding:24px 16px;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:' + white + ';border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden;">' +
+    '<tr><td style="background:' + primary + ';color:' + white + ';padding:20px 24px;font-size:20px;font-weight:700;">Premier Transport</td></tr>' +
+    '<tr><td style="padding:24px;">' +
+    '<p style="margin:0 0 20px;font-size:16px;">Hi ' + esc(name) + ',</p>' +
+    '<p style="margin:0 0 20px;font-size:15px;">We received your booking request. Here are your trip details:</p>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';border-radius:' + radius + ';margin-bottom:16px;">' +
+    '<tr><td style="padding:16px 20px;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';padding-bottom:6px;">Pickup</td></tr><tr><td style="font-size:15px;">' + pickupLink + '</td></tr></table>' +
+    '</td></tr><tr><td style="padding:0 20px 8px;"><div style="border-left:2px dashed ' + muted + ';height:20px;margin-left:8px;"></div></td></tr><tr><td style="padding:0 20px 16px;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';padding-bottom:6px;">Drop-off</td></tr><tr><td style="font-size:15px;">' + dropoffLink + '</td></tr></table>' +
+    '</td></tr></table>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Date & time</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-weight:600;">' + esc(dateTime) + '</td></tr>' +
+    '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Passengers</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;">' + esc(passengers) + '</td></tr>' +
+    (roundTrip ? '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Round trip return</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;">' + esc(returnDateTime) + '</td></tr>' : '') +
+    '</table>' +
+    notesBubble +
+    '<p style="margin:24px 0 0;font-size:14px;color:' + muted + ';">We\'ll confirm your ride by phone or email. If you don\'t hear from us within 24 hours, call or text <a href="tel:+17279994999" style="color:' + primary + ';text-decoration:underline;">(727) 999-4999</a>.</p>' +
+    '<p style="margin:12px 0 0;font-size:14px;color:' + muted + ';">— Premier Transport</p>' +
+    '</td></tr></table></td></tr></table></body></html>'
+  );
+}
+
 function sendBookingConfirmationToCustomer(record) {
   var to = (record.email || '').trim().toLowerCase();
   // #region agent log
@@ -259,6 +317,7 @@ function sendBookingConfirmationToCustomer(record) {
   lines.push('');
   lines.push('— Premier Transport');
   var text = lines.join('\n');
+  var html = buildConfirmationEmailHtml(record);
   fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -269,7 +328,8 @@ function sendBookingConfirmationToCustomer(record) {
       from: 'Premier Transport <onboarding@resend.dev>',
       to: [to],
       subject: 'Booking request received – ' + record.pickup_date + ' ' + (record.pickup_time || ''),
-      text: text
+      text: text,
+      html: html
     })
   })
     .then(function (res) {
