@@ -31,7 +31,7 @@ When a customer submits a booking, the server can email you (and others) so you�
 
 If these are not set, bookings are still saved and the form works; you just won’t get email alerts.
 
-**Resend setup:** Sign up at resend.com, create an API key, add it as `RESEND_API_KEY`. Set `NOTIFY_EMAIL` to your email, or a comma-separated list for your whole team. Emails are sent from `onboarding@resend.dev` on the free tier.
+**Resend setup:** Sign up at resend.com, create an API key, add it as `RESEND_API_KEY`. Set `NOTIFY_EMAIL` to your email, or a comma-separated list for your whole team. When using the default sender `onboarding@resend.dev` (Resend’s testing domain), **you can only send to the email address that owns the Resend account**. To send to multiple recipients (e.g. partners, staff), **verify your domain** at [resend.com/domains](https://resend.com/domains), then set `RESEND_FROM_EMAIL` on the server (e.g. `noreply@premiertransport.services` or `Premier Transport <noreply@premiertransport.services>`).
 
 **SMS (optional, later):** To add text alerts later, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, and `NOTIFY_PHONE` on Render. The server will then also send you an SMS for each booking. You can leave these unset for now.
 

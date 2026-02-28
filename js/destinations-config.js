@@ -2,11 +2,17 @@
  * Premier Transport - Destinations & pricing config
  * Add, edit, or remove destinations and routes here.
  *
- * Google APIs used by the booking form (enable these in Google Cloud Console):
- * - Maps JavaScript API (map + Directions + Places library)
- * - Places API (address autocomplete)
- * - Directions API (route, distance, drive time with traffic)
- * Restrict the API key by HTTP referrer (e.g. https://premiertransport.services/*) in production.
+ * If you see "This page can't load Google Maps correctly" on the booking form:
+ * 1. Go to https://console.cloud.google.com/apis/library and enable:
+ *    - Maps JavaScript API
+ *    - Places API
+ *    - Directions API
+ * 2. Go to https://console.cloud.google.com/apis/credentials, open your API key.
+ * 3. Under "Application restrictions" choose "HTTP referrers" and add:
+ *    https://premiertransport.services/*
+ *    https://www.premiertransport.services/*
+ *    http://localhost:* (for local testing)
+ * 4. Ensure billing is enabled for the project (Google offers free tier for these APIs).
  */
 window.PremierTransportConfig = {
   overnightSurcharge: 10,

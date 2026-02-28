@@ -6,6 +6,11 @@
     if (tripInfoEl) {
       tripInfoEl.innerHTML = 'Map could not load. Check that your Google API key is valid and that Maps JavaScript API, Places API, and Directions API are enabled in Google Cloud Console. <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener">Google Cloud Console</a>';
     }
+    var hintEl = document.getElementById('maps-key-hint');
+    if (hintEl) {
+      hintEl.innerHTML = 'Address suggestions are off: fix the Google Maps API key in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> (enable Maps JavaScript API + Places API, and add your domain under key restrictions). You can still type your address.';
+      hintEl.style.display = 'block';
+    }
   };
 
   function runWithConfig(config) {

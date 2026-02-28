@@ -25,6 +25,9 @@ var app = express();
 var PORT = process.env.PORT || 3000;
 
 var RESEND_API_KEY = process.env.RESEND_API_KEY;
+var RESEND_FROM = (process.env.RESEND_FROM_EMAIL && process.env.RESEND_FROM_EMAIL.trim())
+  ? (process.env.RESEND_FROM_EMAIL.trim().indexOf('<') !== -1 ? process.env.RESEND_FROM_EMAIL.trim() : 'Premier Transport <' + process.env.RESEND_FROM_EMAIL.trim() + '>')
+  : 'Premier Transport <onboarding@resend.dev>';
 var NOTIFY_EMAIL = process.env.NOTIFY_EMAIL;
 var TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 var TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
@@ -152,7 +155,7 @@ function sendVerificationEmail(email, baseUrl) {
   var verifyUrl = baseUrl.replace(/\/$/, '') + '/email-verified?email=' + encodeURIComponent(email);
   var text = 'You were added to receive Premier Transport booking notifications.\n\nClick the link below to confirm this email is working:\n' + verifyUrl + '\n\nIf you didn\'t expect this, you can ignore this email.';
   return resendSendEmail({
-    from: 'Premier Transport <onboarding@resend.dev>',
+    from: RESEND_FROM,
     to: [email],
     subject: 'Verify your Premier Transport booking notifications',
     text: text
@@ -281,11 +284,11 @@ function googleMapsUrl(address) {
 function buildConfirmationEmailHtml(record) {
   var primary = '#0d3b5c';
   var accent = '#e8a735';
-  var bg = '#f8f9fa';
+  var bg = '#f0f4f8';
+  var cardBg = '#ffffff';
   var textColor = '#2c3e50';
   var muted = '#5a6c7d';
-  var white = '#ffffff';
-  var radius = '8px';
+  var radius = '10px';
   var pickupAddr = (record.pickup_address || '').trim() || '—';
   var dropoffDisplay = (record.dropoff_dest || record.dropoff_other_address || '').trim() || '—';
   var pickupMaps = googleMapsUrl(record.pickup_address);
@@ -297,36 +300,37 @@ function buildConfirmationEmailHtml(record) {
   var roundTrip = record.round_trip && (record.return_date || record.return_time);
   var returnDateTime = (record.return_date || '') + (record.return_time ? ' at ' + record.return_time : '');
   var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
-  var pickupLink = pickupMaps
-    ? '<a href="' + esc(pickupMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(pickupAddr) + '</a> &nbsp;<a href="' + esc(pickupMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
-    : esc(pickupAddr);
-  var dropoffLink = dropoffMaps
-    ? '<a href="' + esc(dropoffMaps) + '" style="color:' + primary + ';text-decoration:underline;">' + esc(dropoffDisplay) + '</a> &nbsp;<a href="' + esc(dropoffMaps) + '" style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">View on Google Maps</a>'
-    : esc(dropoffDisplay);
+  var mapBtn = ' style="display:inline-block;background:' + accent + ';color:#1a1a1a;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:8px;"';
+  var pickupBlock = pickupMaps
+    ? '<div style="font-size:16px;line-height:1.5;color:' + textColor + ';">' + esc(pickupAddr) + '</div><a href="' + esc(pickupMaps) + '"' + mapBtn + '>View on Google Maps</a>'
+    : '<div style="font-size:16px;color:' + textColor + ';">' + esc(pickupAddr) + '</div>';
+  var dropoffBlock = dropoffMaps
+    ? '<div style="font-size:16px;line-height:1.5;color:' + textColor + ';">' + esc(dropoffDisplay) + '</div><a href="' + esc(dropoffMaps) + '"' + mapBtn + '>View on Google Maps</a>'
+    : '<div style="font-size:16px;color:' + textColor + ';">' + esc(dropoffDisplay) + '</div>';
   var notesBubble = specialRequests
-    ? '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;"><tr><td style="background:#fff8e8;border-left:4px solid ' + accent + ';padding:14px 16px;border-radius:' + radius + ';font-size:14px;line-height:1.5;color:' + textColor + ';"><strong style="color:' + primary + ';">Notes / special requests</strong><br>' + esc(specialRequests) + '</td></tr></table>'
+    ? '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;"><tr><td style="background:#fff9f0;border-left:4px solid ' + accent + ';padding:18px 20px;border-radius:' + radius + ';font-size:15px;line-height:1.6;color:' + textColor + ';"><strong style="color:' + primary + ';font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Your notes</strong><br><span style="margin-top:6px;display:block;">' + esc(specialRequests) + '</span></td></tr></table>'
     : '';
   return (
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.5;color:' + textColor + ';background:' + bg + ';">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';"><tr><td style="padding:24px 16px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:' + white + ';border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden;">' +
-    '<tr><td style="background:' + primary + ';color:' + white + ';padding:20px 24px;font-size:20px;font-weight:700;">Premier Transport</td></tr>' +
-    '<tr><td style="padding:24px;">' +
-    '<p style="margin:0 0 20px;font-size:16px;">Hi ' + esc(name) + ',</p>' +
-    '<p style="margin:0 0 20px;font-size:15px;">We received your booking request. Here are your trip details:</p>' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';border-radius:' + radius + ';margin-bottom:16px;">' +
-    '<tr><td style="padding:16px 20px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';padding-bottom:6px;">Pickup</td></tr><tr><td style="font-size:15px;">' + pickupLink + '</td></tr></table>' +
-    '</td></tr><tr><td style="padding:0 20px 8px;"><div style="border-left:2px dashed ' + muted + ';height:20px;margin-left:8px;"></div></td></tr><tr><td style="padding:0 20px 16px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:' + muted + ';padding-bottom:6px;">Drop-off</td></tr><tr><td style="font-size:15px;">' + dropoffLink + '</td></tr></table>' +
-    '</td></tr></table>' +
-    '<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Date & time</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-weight:600;">' + esc(dateTime) + '</td></tr>' +
-    '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Passengers</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;">' + esc(passengers) + '</td></tr>' +
-    (roundTrip ? '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;"><span style="color:' + muted + ';">Round trip return</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;">' + esc(returnDateTime) + '</td></tr>' : '') +
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Booking confirmation</title></head>' +
+    '<body style="margin:0;padding:0;font-family:\'Segoe UI\',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;font-size:16px;line-height:1.6;color:' + textColor + ';background:' + bg + ';">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';"><tr><td style="padding:40px 20px;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;margin:0 auto;background:' + cardBg + ';border-radius:14px;box-shadow:0 8px 32px rgba(13,59,92,0.12);overflow:hidden;">' +
+    '<tr><td style="background:' + primary + ';color:#fff;padding:28px 28px 26px;font-size:22px;font-weight:700;letter-spacing:-0.02em;">Premier Transport</td></tr>' +
+    '<tr><td style="padding:32px 28px;">' +
+    '<p style="margin:0 0 8px;font-size:19px;font-weight:600;color:' + primary + ';">Hi ' + esc(name) + ',</p>' +
+    '<p style="margin:0 0 28px;font-size:16px;color:' + muted + ';">Your booking request is confirmed. Here are your trip details:</p>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + bg + ';border-radius:' + radius + ';margin-bottom:20px;border:1px solid #e5e9ee;">' +
+    '<tr><td style="padding:20px 22px 12px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:' + muted + ';font-weight:600;">Pickup</span></td></tr><tr><td style="padding:0 22px 20px;">' + pickupBlock + '</td></tr>' +
+    '<tr><td style="padding:0 22px 12px;"><div style="border-left:2px dashed ' + muted + ';height:24px;margin-left:10px;opacity:0.6;"></div></td></tr>' +
+    '<tr><td style="padding:0 22px 12px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:' + muted + ';font-weight:600;">Drop-off</span></td></tr><tr><td style="padding:0 22px 20px;">' + dropoffBlock + '</td></tr>' +
+    '</table>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:15px;">' +
+    '<tr><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;"><span style="color:' + muted + ';">Date & time</span></td><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;text-align:right;font-weight:600;color:' + textColor + ';">' + esc(dateTime) + '</td></tr>' +
+    '<tr><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;"><span style="color:' + muted + ';">Passengers</span></td><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;text-align:right;">' + esc(passengers) + '</td></tr>' +
+    (roundTrip ? '<tr><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;"><span style="color:' + muted + ';">Round trip return</span></td><td style="padding:14px 0;border-bottom:1px solid #e8ecf0;text-align:right;font-weight:600;">' + esc(returnDateTime) + '</td></tr>' : '') +
     '</table>' +
     notesBubble +
-    '<p style="margin:24px 0 0;font-size:14px;color:' + muted + ';">We\'ll confirm your ride by phone or email. If you don\'t hear from us within 24 hours, call or text <a href="tel:+17279994999" style="color:' + primary + ';text-decoration:underline;">(727) 999-4999</a>.</p>' +
-    '<p style="margin:12px 0 0;font-size:14px;color:' + muted + ';">— Premier Transport</p>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px;"><tr><td style="padding-top:24px;border-top:1px solid #e8ecf0;font-size:15px;color:' + muted + ';">We\'ll confirm your ride by phone or email. Questions? Call or text <a href="tel:+17279994999" style="color:' + primary + ';text-decoration:underline;font-weight:600;">(727) 999-4999</a>.</td></tr><tr><td style="padding-top:16px;font-size:14px;color:' + muted + ';">— Premier Transport</td></tr></table>' +
     '</td></tr></table></td></tr></table></body></html>'
   );
 }
@@ -372,7 +376,7 @@ function sendBookingConfirmationToCustomer(record) {
     console.warn('Booking confirmation HTML build failed, sending text only:', err.message);
   }
   var payload = {
-    from: 'Premier Transport <onboarding@resend.dev>',
+    from: RESEND_FROM,
     to: [to],
     subject: 'Booking request received – ' + record.pickup_date + ' ' + (record.pickup_time || ''),
     text: text
@@ -437,32 +441,39 @@ function notifyNewBooking(record) {
     console.warn('Booking notification skipped: RESEND_API_KEY not set on the server.');
   }
   if (RESEND_API_KEY && toList.length) {
-    console.log('[Email] Sending admin notification to:', toList.join(', '));
-    // #region agent log
-    debugLog('Resend fetch starting', {}, 'H4');
-    // #endregion
-    resendSendEmail({
-      from: 'Premier Transport <onboarding@resend.dev>',
-      to: toList,
-      subject: 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date,
-      text: details
-    })
-      .then(function (result) {
-        // #region agent log
-        debugLog('Resend fetch response', { ok: result.ok, status: result.status }, 'H4');
-        // #endregion
-        if (!result.ok) {
-          console.warn('[Email] Resend admin notification rejected:', result.status, result.body && result.body.message ? result.body.message : result.body);
-          return;
-        }
-        console.log('[Email] Admin notification sent.');
+    var subject = 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date;
+    toList.forEach(function (toEmail) {
+      console.log('[Email] Sending admin notification to:', toEmail);
+      // #region agent log
+      debugLog('Resend fetch starting', { to: toEmail }, 'H4');
+      // #endregion
+      resendSendEmail({
+        from: RESEND_FROM,
+        to: [toEmail],
+        subject: subject,
+        text: details
       })
-      .catch(function (err) {
-        // #region agent log
-        debugLog('Resend fetch error', { message: (err && err.message) || String(err) }, 'H5');
-        // #endregion
-        console.warn('[Email] Resend admin notification failed:', err.message);
-      });
+        .then(function (result) {
+          // #region agent log
+          debugLog('Resend fetch response', { ok: result.ok, status: result.status, to: toEmail }, 'H4');
+          // #endregion
+          if (!result.ok) {
+            var msg = result.body && result.body.message ? result.body.message : result.body;
+            console.warn('[Email] Resend admin notification rejected for', toEmail, ':', result.status, msg);
+            if (result.status === 403 && msg && String(msg).indexOf('verify a domain') !== -1) {
+              console.warn('[Email] To send to multiple recipients: verify your domain at https://resend.com/domains and set RESEND_FROM_EMAIL.');
+            }
+            return;
+          }
+          console.log('[Email] Admin notification sent to', toEmail);
+        })
+        .catch(function (err) {
+          // #region agent log
+          debugLog('Resend fetch error', { message: (err && err.message) || String(err), to: toEmail }, 'H5');
+          // #endregion
+          console.warn('[Email] Resend admin notification failed for', toEmail, ':', err.message);
+        });
+    });
   }
 
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && NOTIFY_PHONE) {
