@@ -311,7 +311,7 @@
     });
 
     function normalizePhone(phone) {
-      return (phone || '').replace(/\D/g, '') || ('email:' + (document ? '' : ''));
+      return (phone || '').replace(/\D/g, '') || '';
     }
     function getTripDateTime(b) {
       var d = (b.pickup_date || '').trim();

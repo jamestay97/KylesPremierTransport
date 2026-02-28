@@ -380,7 +380,6 @@
     if (swapBtn) swapBtn.addEventListener('click', swapAddresses);
 
     var autocompleteOptions = {
-      types: ['geocode'],
       fields: ['formatted_address', 'name'],
       componentRestrictions: { country: 'us' }
     };
@@ -750,6 +749,12 @@
         formData.forEach(function (value, key) {
           payload[key] = value;
         });
+        var nameEl = form.querySelector('#name') || form.querySelector('[name="name"]');
+        var phoneEl = form.querySelector('#phone') || form.querySelector('[name="phone"]');
+        var emailEl = form.querySelector('#email') || form.querySelector('[name="email"]');
+        if (nameEl) payload.name = (nameEl.value || '').trim();
+        if (phoneEl) payload.phone = (phoneEl.value || '').trim();
+        if (emailEl) payload.email = (emailEl.value || '').trim().toLowerCase();
         var nextUrl = (form.querySelector('input[name="_next"]') || {}).value || (window.location.pathname + '?submitted=1');
         var submitBtn = form.querySelector('button[type="submit"]');
         var originalBtnText = submitBtn ? submitBtn.textContent : '';
@@ -762,19 +767,12 @@
           }
         }
         setLoading(true);
-        // #region agent log
-        var submitStart = Date.now();
-        fetch('http://127.0.0.1:7897/ingest/e1107619-0daa-471a-85ee-b42c76ccb5a0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ea39b2'},body:JSON.stringify({sessionId:'ea39b2',location:'booking.js:submit',message:'submit_start',data:{apiBase:apiBase,url:(apiBase||'')+'/api/bookings'},timestamp:Date.now(),hypothesisId:'H7'})}).catch(function(){});
-        // #endregion
 
         fetch(apiBase + '/api/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).then(function (res) {
-          // #region agent log
-          fetch('http://127.0.0.1:7897/ingest/e1107619-0daa-471a-85ee-b42c76ccb5a0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ea39b2'},body:JSON.stringify({sessionId:'ea39b2',location:'booking.js:fetch-done',message:'fetch_done',data:{ok:res&&res.ok,status:res&&res.status,elapsed:Date.now()-submitStart},timestamp:Date.now(),hypothesisId:'H8'})}).catch(function(){});
-          // #endregion
           if (!res.ok && res.status === 400) {
             var errEl = document.getElementById('pickup-24h-error');
             if (errEl) {
