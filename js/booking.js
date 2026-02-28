@@ -380,7 +380,7 @@
     if (swapBtn) swapBtn.addEventListener('click', swapAddresses);
 
     var autocompleteOptions = {
-      types: ['address', 'establishment'],
+      types: ['geocode'],
       fields: ['formatted_address', 'name'],
       componentRestrictions: { country: 'us' }
     };
@@ -459,7 +459,7 @@
         if (window._gmapsLoading && !window.google) window._gmapsLoading = false;
       }, 8000);
       var s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=' + MAPS_CALLBACK_NAME;
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&loading=async&callback=' + MAPS_CALLBACK_NAME;
       s.async = true;
       s.defer = true;
       s.onerror = function () { window._gmapsLoading = false; };
@@ -524,8 +524,13 @@
       }
 
       var apiKey = config.googleMapsApiKey || '';
+      var originLooksLikeAddress = origin.length >= 15 || origin.indexOf(',') !== -1;
       if (apiKey && window.google && window.google.maps) {
         initPlacesAutocomplete();
+        if (!originLooksLikeAddress) {
+          tripInfoEl.innerHTML = 'Enter a full address above for drive time and map. <a href="' + mapsUrl + '" target="_blank" rel="noopener">View route on Google Maps</a>.';
+          return;
+        }
         var departureTime = buildDepartureDate() || new Date();
         var request = {
           origin: origin,
@@ -562,8 +567,8 @@
           } else {
             var errMsg = status === google.maps.DirectionsStatus.REQUEST_DENIED || status === google.maps.DirectionsStatus.OVER_QUERY_LIMIT
               ? 'Enable Directions API and check your API key in Google Cloud Console.'
-              : 'Route found.';
-            tripInfoEl.innerHTML = errMsg + ' <a href="' + mapsUrl + '" target="_blank" rel="noopener">View on Google Maps</a> for details.';
+              : (status === google.maps.DirectionsStatus.NOT_FOUND || status === 'NOT_FOUND' ? 'Route not found for this address. Use a full address or ' : '');
+            tripInfoEl.innerHTML = errMsg + '<a href="' + mapsUrl + '" target="_blank" rel="noopener">View route on Google Maps</a> for details.';
           }
         });
       } else if (apiKey && !window.google) {
@@ -580,7 +585,7 @@
             updateReturnTripPreview();
           };
           var s = document.createElement('script');
-          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=' + MAPS_CALLBACK_NAME;
+          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&loading=async&callback=' + MAPS_CALLBACK_NAME;
           s.async = true;
           s.defer = true;
           s.onerror = function () { window._gmapsLoading = false; };
@@ -626,8 +631,13 @@
       }
 
       var apiKey = config.googleMapsApiKey || '';
+      var returnDestLooksLikeAddress = returnDest.length >= 15 || returnDest.indexOf(',') !== -1;
       if (apiKey && window.google && window.google.maps) {
         initReturnPlacesAutocomplete();
+        if (!returnDestLooksLikeAddress) {
+          returnTripInfoEl.innerHTML = 'Enter a full return address above for drive time. <a href="' + mapsUrl + '" target="_blank" rel="noopener">View return route on Google Maps</a>.';
+          return;
+        }
         var departureTime = buildReturnDepartureDate() || new Date();
         var request = {
           origin: returnOrigin,
@@ -664,8 +674,8 @@
           } else {
             var errMsg = status === google.maps.DirectionsStatus.REQUEST_DENIED || status === google.maps.DirectionsStatus.OVER_QUERY_LIMIT
               ? 'Enable Directions API and check your API key in Google Cloud Console.'
-              : 'Route found.';
-            returnTripInfoEl.innerHTML = errMsg + ' <a href="' + mapsUrl + '" target="_blank" rel="noopener">View on Google Maps</a> for details.';
+              : (status === google.maps.DirectionsStatus.NOT_FOUND || status === 'NOT_FOUND' ? 'Route not found for this address. Use a full address or ' : '');
+            returnTripInfoEl.innerHTML = errMsg + '<a href="' + mapsUrl + '" target="_blank" rel="noopener">View return route on Google Maps</a> for details.';
           }
         });
       } else if (apiKey && !window.google) {
