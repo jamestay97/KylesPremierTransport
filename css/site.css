@@ -309,6 +309,27 @@ body.home .section-alt {
   color: #1a1a1a;
 }
 
+.btn-primary.btn-loading {
+  cursor: wait;
+  opacity: 0.85;
+  position: relative;
+}
+.btn-primary.btn-loading::after {
+  content: '';
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-left: 0.5em;
+  vertical-align: middle;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn-outline {
   background: transparent;
   color: var(--color-white);

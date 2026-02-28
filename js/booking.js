@@ -671,12 +671,30 @@
           payload[key] = value;
         });
         var nextUrl = (form.querySelector('input[name="_next"]') || {}).value || (window.location.pathname + '?submitted=1');
+        var submitBtn = form.querySelector('button[type="submit"]');
+        var originalBtnText = submitBtn ? submitBtn.textContent : '';
+        function setLoading(loading) {
+          if (submitBtn) {
+            submitBtn.disabled = loading;
+            submitBtn.textContent = loading ? 'Submitting…' : originalBtnText;
+            submitBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+            if (loading) submitBtn.classList.add('btn-loading'); else submitBtn.classList.remove('btn-loading');
+          }
+        }
+        setLoading(true);
+        // #region agent log
+        var submitStart = Date.now();
+        fetch('http://127.0.0.1:7897/ingest/e1107619-0daa-471a-85ee-b42c76ccb5a0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ea39b2'},body:JSON.stringify({sessionId:'ea39b2',location:'booking.js:submit',message:'submit_start',data:{apiBase:apiBase,url:(apiBase||'')+'/api/bookings'},timestamp:Date.now(),hypothesisId:'H7'})}).catch(function(){});
+        // #endregion
 
         fetch(apiBase + '/api/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).then(function (res) {
+          // #region agent log
+          fetch('http://127.0.0.1:7897/ingest/e1107619-0daa-471a-85ee-b42c76ccb5a0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ea39b2'},body:JSON.stringify({sessionId:'ea39b2',location:'booking.js:fetch-done',message:'fetch_done',data:{ok:res&&res.ok,status:res&&res.status,elapsed:Date.now()-submitStart},timestamp:Date.now(),hypothesisId:'H8'})}).catch(function(){});
+          // #endregion
           if (!res.ok && res.status === 400) {
             var errEl = document.getElementById('pickup-24h-error');
             if (errEl) {
@@ -690,10 +708,33 @@
           return res;
         }).catch(function (err) {
           if (err && err.message === 'Pickup too soon') return Promise.reject(err);
-          return { ok: true };
+          return { ok: false, networkError: true };
         }).then(function (res) {
-          if (res && !res.ok) return;
-          window.location.href = nextUrl;
+          if (res && res.networkError) {
+            setLoading(false);
+            var errEl = document.getElementById('pickup-24h-error');
+            if (errEl) {
+              errEl.textContent = 'Request failed. Please check your connection and try again, or call (727) 999-4999.';
+              errEl.style.display = 'block';
+            }
+            return;
+          }
+          if (res && !res.ok) {
+            setLoading(false);
+            var errEl = document.getElementById('pickup-24h-error');
+            if (errEl) {
+              errEl.textContent = 'Something went wrong. Please try again or call (727) 999-4999.';
+              errEl.style.display = 'block';
+            }
+            return;
+          }
+          if (res && res.ok) {
+            window.location.href = nextUrl;
+            return;
+          }
+          setLoading(false);
+        }).catch(function () {
+          setLoading(false);
         });
       });
       function clearFieldError() {

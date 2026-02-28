@@ -3,6 +3,21 @@ var fs = require('fs');
 var express = require('express');
 var session = require('express-session');
 
+// #region agent log
+var DEBUG_LOG_PATH = path.join(__dirname, 'debug-ea39b2.log');
+function debugLog(message, data, hypothesisId) {
+  var line = JSON.stringify({
+    sessionId: 'ea39b2',
+    timestamp: Date.now(),
+    location: 'server.js',
+    message: message,
+    data: data || {},
+    hypothesisId: hypothesisId || ''
+  }) + '\n';
+  try { fs.appendFileSync(DEBUG_LOG_PATH, line, 'utf8'); } catch (e) {}
+}
+// #endregion
+
 var app = express();
 var PORT = process.env.PORT || 3000;
 
@@ -216,6 +231,66 @@ function formatBookingSummary(r) {
   return parts.join(' | ');
 }
 
+function sendBookingConfirmationToCustomer(record) {
+  var to = (record.email || '').trim().toLowerCase();
+  // #region agent log
+  debugLog('sendBookingConfirmationToCustomer', { hasTo: !!to, hasResendKey: !!RESEND_API_KEY }, 'customer-confirm');
+  // #endregion
+  if (!to || !RESEND_API_KEY) return;
+  var lines = [
+    'Hi ' + (record.name || 'there') + ',',
+    '',
+    'We received your booking request with Premier Transport. Here are your details:',
+    '',
+    'Pickup: ' + (record.pickup_address || '—'),
+    'Drop-off: ' + (record.dropoff_dest || record.dropoff_other_address || '—'),
+    'Date & time: ' + record.pickup_date + ' ' + (record.pickup_time || ''),
+    'Passengers: ' + (record.passengers || 1)
+  ];
+  if (record.round_trip) {
+    lines.push('Round trip return: ' + record.return_date + ' ' + (record.return_time || ''));
+  }
+  if (record.special_requests) {
+    lines.push('');
+    lines.push('Notes: ' + record.special_requests);
+  }
+  lines.push('');
+  lines.push('We\'ll confirm your ride by phone or email. If you don\'t hear from us within 24 hours, call or text (727) 999-4999.');
+  lines.push('');
+  lines.push('— Premier Transport');
+  var text = lines.join('\n');
+  fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + RESEND_API_KEY
+    },
+    body: JSON.stringify({
+      from: 'Premier Transport <onboarding@resend.dev>',
+      to: [to],
+      subject: 'Booking request received – ' + record.pickup_date + ' ' + (record.pickup_time || ''),
+      text: text
+    })
+  })
+    .then(function (res) {
+      // #region agent log
+      debugLog('Resend confirmation response', { ok: res.ok, status: res.status }, 'customer-confirm');
+      // #endregion
+      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          console.warn('Resend confirmation email rejected:', res.status, body.message || body);
+        });
+      }
+      console.log('Booking confirmation email sent to customer.');
+    })
+    .catch(function (err) {
+      // #region agent log
+      debugLog('Resend confirmation error', { message: (err && err.message) || String(err) }, 'customer-confirm');
+      // #endregion
+      console.warn('Resend confirmation email failed:', err.message);
+    });
+}
+
 function notifyNewBooking(record) {
   var summary = formatBookingSummary(record);
   var details = [
@@ -238,6 +313,10 @@ function notifyNewBooking(record) {
   fromConfig.concat(fromEnv).forEach(function (e) {
     if (e && !seen[e]) { seen[e] = true; toList.push(e); }
   });
+  // #region agent log
+  debugLog('notifyNewBooking', { toListLength: toList.length, hasResendKey: !!RESEND_API_KEY, toListCount: toList.length }, 'H1');
+  debugLog('notifyNewBooking RESEND_API_KEY check', { hasKey: !!RESEND_API_KEY }, 'H2');
+  // #endregion
   if (!toList.length) {
     console.warn('Booking notification skipped: no notification emails configured. Add emails in Admin or set NOTIFY_EMAIL on the server.');
   }
@@ -246,6 +325,9 @@ function notifyNewBooking(record) {
   }
   if (RESEND_API_KEY && toList.length) {
     console.log('Booking notification sending to:', toList.join(', '));
+    // #region agent log
+    debugLog('Resend fetch starting', {}, 'H4');
+    // #endregion
     fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -260,6 +342,9 @@ function notifyNewBooking(record) {
       })
     })
       .then(function (res) {
+        // #region agent log
+        debugLog('Resend fetch response', { ok: res.ok, status: res.status }, 'H4');
+        // #endregion
         if (!res.ok) {
           return res.json().catch(function () { return {}; }).then(function (body) {
             console.warn('Resend booking email rejected:', res.status, body.message || body);
@@ -267,7 +352,12 @@ function notifyNewBooking(record) {
         }
         console.log('Resend booking email sent.');
       })
-      .catch(function (err) { console.warn('Resend booking email failed:', err.message); });
+      .catch(function (err) {
+        // #region agent log
+        debugLog('Resend fetch error', { message: (err && err.message) || String(err) }, 'H5');
+        // #endregion
+        console.warn('Resend booking email failed:', err.message);
+      });
   }
 
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && NOTIFY_PHONE) {
@@ -306,6 +396,9 @@ function isDuplicateBooking(bookings, record, windowMinutes) {
 }
 
 app.post('/api/bookings', function (req, res) {
+  // #region agent log
+  debugLog('POST /api/bookings received', { hasBody: !!(req.body && Object.keys(req.body || {}).length) }, 'H8');
+  // #endregion
   var body = req.body || {};
   if (!isPickupAtLeast24hFromNow(body.pickup_date, body.pickup_time)) {
     return res.status(400).json({
@@ -336,13 +429,21 @@ app.post('/api/bookings', function (req, res) {
     special_requests: (body.special_requests || '').trim(),
     addon_car_seat: !!body.addon_car_seat
   };
-  if (isDuplicateBooking(bookings, record, 10)) {
+  var isDup = isDuplicateBooking(bookings, record, 10);
+  // #region agent log
+  debugLog('duplicate check', { isDuplicate: isDup }, 'H3');
+  // #endregion
+  if (isDup) {
     res.status(201).json({ ok: true, id: id, duplicate: true });
     return;
   }
   bookings.push(record);
   writeBookings(bookings);
+  sendBookingConfirmationToCustomer(record);
   notifyNewBooking(record);
+  // #region agent log
+  debugLog('booking saved, notifyNewBooking called', {}, 'H3');
+  // #endregion
   res.status(201).json({ ok: true, id: id });
 });
 
