@@ -488,14 +488,17 @@ function notifyNewBooking(record) {
     var subject = 'New booking: ' + (record.name || 'Booking') + ' – ' + record.pickup_date;
     var adminHtml = null;
     try { adminHtml = buildAdminNotificationEmailHtml(record); } catch (e) { console.warn('[Email] Admin HTML build failed:', e.message); }
-    toList.forEach(function (toEmail) {
+    var adminPayload = { from: RESEND_FROM, to: [], subject: subject, text: details };
+    if (adminHtml) adminPayload.html = adminHtml;
+    var RESEND_RATE_MS = 600;
+    function sendAdminToOne(index) {
+      if (index >= toList.length) return;
+      var toEmail = toList[index];
       console.log('[Email] Sending admin notification to:', toEmail);
       // #region agent log
       debugLog('Resend fetch starting', { to: toEmail }, 'H4');
       // #endregion
-      var adminPayload = { from: RESEND_FROM, to: [toEmail], subject: subject, text: details };
-      if (adminHtml) adminPayload.html = adminHtml;
-      resendSendEmail(adminPayload)
+      resendSendEmail({ from: adminPayload.from, to: [toEmail], subject: adminPayload.subject, text: adminPayload.text, html: adminPayload.html })
         .then(function (result) {
           // #region agent log
           debugLog('Resend fetch response', { ok: result.ok, status: result.status, to: toEmail }, 'H4');
@@ -506,17 +509,20 @@ function notifyNewBooking(record) {
             if (result.status === 403 && msg && String(msg).indexOf('verify a domain') !== -1) {
               console.warn('[Email] To send to multiple recipients: verify your domain at https://resend.com/domains and set RESEND_FROM_EMAIL.');
             }
-            return;
+          } else {
+            console.log('[Email] Admin notification sent to', toEmail);
           }
-          console.log('[Email] Admin notification sent to', toEmail);
+          if (index + 1 < toList.length) setTimeout(function () { sendAdminToOne(index + 1); }, RESEND_RATE_MS);
         })
         .catch(function (err) {
           // #region agent log
           debugLog('Resend fetch error', { message: (err && err.message) || String(err), to: toEmail }, 'H5');
           // #endregion
           console.warn('[Email] Resend admin notification failed for', toEmail, ':', err.message);
+          if (index + 1 < toList.length) setTimeout(function () { sendAdminToOne(index + 1); }, RESEND_RATE_MS);
         });
-    });
+    }
+    sendAdminToOne(0);
   }
 
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && NOTIFY_PHONE) {
@@ -605,7 +611,7 @@ app.post('/api/bookings', function (req, res) {
   debugLog('before sendEmail', { recordEmail: !!(record.email && record.email.trim()) }, 'H2');
   // #endregion
   sendBookingConfirmationToCustomer(record);
-  notifyNewBooking(record);
+  setTimeout(function () { notifyNewBooking(record); }, 600);
   // #region agent log
   debugLog('booking saved, notifyNewBooking called', {}, 'H3');
   // #endregion
