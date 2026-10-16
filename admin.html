@@ -76,13 +76,53 @@
     .admin-panel { display: none; }
     .admin-panel.show { display: block; }
     .save-bar-sticky { position: sticky; bottom: 0; background: #fff; padding: 1rem 0 1.5rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; z-index: 10; }
+    .crm-warning { background: #fff5f5; border: 1px solid #feb2b2; color: #9b2c2c; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .crm-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+    .crm-toolbar input[type="search"] { flex: 1; min-width: 200px; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e0; border-radius: 8px; font: inherit; }
+    .crm-outline { color: var(--color-primary); border-color: var(--color-primary); text-decoration: none; }
+    .crm-stats { color: #4a5568; font-size: 0.85rem; margin: 0.25rem 0 1rem; }
+    .crm-tabs { flex-wrap: wrap; }
+    .crm-trip-card.is-cancelled { opacity: 0.6; }
+    .crm-trip-card .trip-when { font-size: 0.9rem; font-weight: 600; color: #2d3748; margin-bottom: 0.2rem; }
+    .crm-trip-card .trip-meta a { color: var(--color-primary); }
+    .crm-trip-card .trip-notes { margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: #fffbea; border-left: 3px solid var(--color-accent); font-size: 0.85rem; white-space: pre-wrap; }
+    .crm-trip-card .trip-badge.status-requested { background: #feebc8; color: #7b341e; }
+    .crm-trip-card .trip-badge.status-confirmed { background: #c6f6d5; color: #276749; }
+    .crm-trip-card .trip-badge.status-completed { background: #e2e8f0; color: #4a5568; }
+    .crm-trip-card .trip-badge.status-cancelled { background: #fed7d7; color: #9b2c2c; }
+    .trip-fare { font-weight: 600; color: #2d3748; margin-left: 0.35rem; font-size: 0.9rem; }
+    .trip-source { font-size: 0.75rem; color: #718096; font-weight: 400; margin-left: 0.35rem; }
+    .trip-card-actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; }
+    .trip-status-quick { font-size: 0.85rem; color: #4a5568; display: flex; gap: 0.35rem; align-items: center; }
+    .trip-status-quick select { padding: 0.25rem 0.4rem; border: 1px solid #cbd5e0; border-radius: 6px; font: inherit; }
+    .btn-small { padding: 0.3rem 0.7rem; font-size: 0.85rem; border: 1px solid var(--color-primary); color: var(--color-primary); background: #fff; border-radius: 6px; cursor: pointer; font: inherit; }
+    .btn-small:hover { background: var(--color-primary); color: #fff; }
+    tr.crm-customer-details.show { display: table-row; }
+    tr.crm-customer-details td { background: #f7fafc; }
+    .trip-dialog { border: none; border-radius: 12px; padding: 0; width: min(640px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .trip-dialog::backdrop { background: rgba(13, 59, 92, 0.45); }
+    .trip-dialog form { padding: 1.25rem 1.5rem; }
+    .trip-dialog h2 { margin: 0 0 1rem; color: var(--color-primary); font-size: 1.25rem; }
+    .trip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+    .trip-grid label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; font-weight: 600; color: #2d3748; }
+    .trip-grid label.check { flex-direction: row; align-items: center; gap: 0.5rem; font-weight: 500; }
+    .trip-grid .span-2 { grid-column: span 2; }
+    .trip-grid input:not([type="checkbox"]), .trip-grid select, .trip-grid textarea { padding: 0.45rem 0.6rem; border: 1px solid #cbd5e0; border-radius: 6px; font: inherit; font-weight: 400; width: 100%; box-sizing: border-box; }
+    .trip-form-error { color: #c53030; min-height: 1.2em; font-size: 0.9rem; margin: 0.75rem 0 0; }
+    .trip-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; }
+    .trip-actions .spacer { flex: 1; }
+    @media (max-width: 560px) {
+      .trip-grid { grid-template-columns: 1fr; }
+      .trip-grid .span-2 { grid-column: span 1; }
+      .admin-header { flex-wrap: wrap; gap: 0.5rem; }
+    }
   </style>
 </head>
 <body>
   <div class="admin-wrap">
     <div id="login-form" class="login-form">
       <h1>Admin login</h1>
-      <p class="form-hint">Sign in to edit locations and pricing.</p>
+      <p class="form-hint">Sign in to manage customers, trips, locations and pricing.</p>
       <form id="login-submit">
         <div class="form-group">
           <label for="login-email">Email</label>
@@ -99,7 +139,7 @@
 
     <div id="admin-editor">
       <div class="admin-header">
-        <h1>Edit locations & pricing</h1>
+        <h1>Premier Transport admin</h1>
         <a href="https://premiertransport.services">← Back to site</a>
         <button type="button" class="btn btn-outline" id="logout-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Log out</button>
       </div>
@@ -112,11 +152,20 @@
       <div id="admin-panel-crm" class="admin-panel show">
       <div class="admin-section crm-section">
         <h2>CRM – Customers & trips</h2>
-        <p class="form-hint">Customers from booking form submissions. No duplicates; last ride date and trip summary per customer. Trips are active (upcoming) or completed (past).</p>
+        <div id="crm-storage-warning" class="crm-warning" style="display: none;">
+          <strong>Bookings are not being saved permanently.</strong> The server has no database connected, so new bookings and changes will be erased the next time it restarts. Add <code>DATABASE_URL</code> on Render to fix this.
+        </div>
+        <div class="crm-toolbar">
+          <input type="search" id="crm-search" placeholder="Search name, phone, email, address…" aria-label="Search customers and trips">
+          <button type="button" class="btn btn-primary" id="crm-add-btn">+ Add trip</button>
+          <a class="btn btn-outline crm-outline" id="crm-export-btn" href="/api/admin/bookings.csv">Download backup (CSV)</a>
+          <button type="button" class="btn btn-outline crm-outline" id="crm-refresh-btn">Refresh</button>
+        </div>
+        <p class="crm-stats" id="crm-stats"></p>
         <div class="crm-tabs">
           <button type="button" class="crm-tab active" data-tab="customers">Customers</button>
-          <button type="button" class="crm-tab" data-tab="active">Active trips</button>
-          <button type="button" class="crm-tab" data-tab="completed">Completed trips</button>
+          <button type="button" class="crm-tab" data-tab="active">Upcoming trips</button>
+          <button type="button" class="crm-tab" data-tab="completed">Past trips</button>
         </div>
         <div id="crm-customers" class="crm-panel show">
           <div class="crm-table-wrap">
@@ -138,17 +187,56 @@
         </div>
         <div id="crm-active" class="crm-panel">
           <div class="crm-trips-list" id="crm-active-body"></div>
-          <p class="crm-empty" id="crm-active-empty" style="display: none;">No active (upcoming) trips.</p>
+          <p class="crm-empty" id="crm-active-empty" style="display: none;">No upcoming trips.</p>
         </div>
         <div id="crm-completed" class="crm-panel">
           <div class="crm-trips-list" id="crm-completed-body"></div>
-          <p class="crm-empty" id="crm-completed-empty" style="display: none;">No completed trips yet.</p>
+          <p class="crm-empty" id="crm-completed-empty" style="display: none;">No past trips yet.</p>
         </div>
-        <p class="crm-refresh">
-          <button type="button" class="btn btn-outline" id="crm-refresh-btn" style="color: var(--color-primary); border-color: var(--color-primary);">Refresh CRM</button>
-        </p>
       </div>
       </div>
+
+      <dialog id="trip-dialog" class="trip-dialog">
+        <form id="trip-form" method="dialog">
+          <h2 id="trip-dialog-title">Add trip</h2>
+          <div class="trip-grid">
+            <label>Name<input type="text" name="name"></label>
+            <label>Phone<input type="tel" name="phone"></label>
+            <label class="span-2">Email<input type="email" name="email"></label>
+            <label>Pickup date<input type="date" name="pickup_date"></label>
+            <label>Pickup time<input type="time" name="pickup_time"></label>
+            <label class="span-2">Pickup address<input type="text" name="pickup_address"></label>
+            <label>Drop-off<select name="dropoff_dest" id="trip-dropoff-select"></select></label>
+            <label>Other drop-off address<input type="text" name="dropoff_other_address"></label>
+            <label>Passengers<input type="number" name="passengers" min="1" value="1"></label>
+            <label>Fare ($)<input type="text" name="fare" placeholder="e.g. 55"></label>
+            <label>Airline<input type="text" name="airline"></label>
+            <label>Flight #<input type="text" name="flight_number"></label>
+            <label class="check span-2"><input type="checkbox" name="round_trip"> Round trip</label>
+            <label>Return date<input type="date" name="return_date"></label>
+            <label>Return time<input type="time" name="return_time"></label>
+            <label class="check span-2"><input type="checkbox" name="addon_car_seat"> Car seat / booster</label>
+            <label>Status
+              <select name="status">
+                <option value="requested">Requested</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <span></span>
+            <label class="span-2">Customer's special requests<textarea name="special_requests" rows="2"></textarea></label>
+            <label class="span-2">Private notes (only you see these)<textarea name="admin_notes" rows="2"></textarea></label>
+          </div>
+          <p class="trip-form-error" id="trip-form-error"></p>
+          <div class="trip-actions">
+            <button type="button" class="btn-remove" id="trip-delete-btn">Delete trip</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-outline crm-outline" id="trip-cancel-btn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="trip-save-btn">Save</button>
+          </div>
+        </form>
+      </dialog>
 
       <div id="admin-panel-settings" class="admin-panel">
       <div class="admin-section">
@@ -235,7 +323,7 @@
       </div>
       </div>
 
-      <div class="save-bar-sticky">
+      <div class="save-bar-sticky" id="settings-save-bar" style="display: none;">
         <div class="save-bar">
           <button type="button" class="btn btn-primary" id="save-config">Save changes</button>
           <p class="save-status" id="save-status"></p>
@@ -245,6 +333,10 @@
   </div>
 
   <script>
+    // The public site (GitHub Pages) can't run the server, so send /admin there to the real admin.
+    if (/^(www\.)?premiertransport\.services$/.test(location.hostname)) {
+      location.replace('https://admin.premiertransport.services/admin');
+    }
     var API = '';
     function getConfig() {
       return fetch(API + '/api/config').then(function (r) { return r.json(); });
@@ -310,6 +402,18 @@
         .then(function () { showLogin(); });
     });
 
+    // ---------------- CRM ----------------
+    var allBookings = [];
+    var crmSearch = document.getElementById('crm-search');
+    var tripDialog = document.getElementById('trip-dialog');
+    var tripForm = document.getElementById('trip-form');
+    var tripFormError = document.getElementById('trip-form-error');
+    var tripDeleteBtn = document.getElementById('trip-delete-btn');
+    var editingId = null;
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
     function normalizePhone(phone) {
       return (phone || '').replace(/\D/g, '') || '';
     }
@@ -317,11 +421,15 @@
       var d = (b.pickup_date || '').trim();
       var t = (b.pickup_time || '').trim();
       if (!d) return null;
-      var str = d + 'T' + (t || '00:00') + ':00';
-      var date = new Date(str);
+      var date = new Date(d + 'T' + (t || '00:00') + ':00');
       return isNaN(date.getTime()) ? null : date;
     }
+    function tripStatus(b) {
+      return b.status || 'requested';
+    }
     function isTripActive(b) {
+      var s = tripStatus(b);
+      if (s === 'completed' || s === 'cancelled') return false;
       var dt = getTripDateTime(b);
       return dt ? dt > new Date() : false;
     }
@@ -332,38 +440,46 @@
     }
     function formatDateTime(b) {
       var dt = getTripDateTime(b);
-      if (!dt) return '—';
-      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      if (!dt) return b.pickup_date || 'No date';
+      return dt.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+    function destName(id) {
+      var d = (config.destinations || []).find(function (x) { return x.id === id; });
+      return d ? d.name : id;
+    }
+    function dropoffText(b) {
+      return (b.dropoff_other_address || '').trim() || (b.dropoff_dest ? destName(b.dropoff_dest) : '') || 'Destination';
     }
     function tripSummary(b) {
-      var from = (b.pickup_address || 'Pickup').trim() || 'Pickup';
-      var to = (b.dropoff_dest || b.dropoff_other_address || 'Destination').trim() || 'Destination';
-      var parts = [from + ' → ' + to, formatDateTime(b)];
-      if (b.round_trip) parts.push('Round trip');
+      var from = (b.pickup_address || '').trim() || 'Pickup';
+      var parts = [from + ' → ' + dropoffText(b)];
+      if (b.round_trip) parts.push('Round trip' + (b.return_date ? ' (return ' + b.return_date + (b.return_time ? ' ' + b.return_time : '') + ')' : ''));
       if (b.passengers > 0) parts.push(b.passengers + ' passenger' + (b.passengers !== 1 ? 's' : ''));
+      if (b.airline || b.flight_number) parts.push(((b.airline || '') + ' ' + (b.flight_number || '')).trim());
       return parts.join(' · ');
+    }
+    function matchesSearch(b, q) {
+      if (!q) return true;
+      var hay = [b.name, b.phone, normalizePhone(b.phone), b.email, b.pickup_address, dropoffText(b), b.admin_notes, b.special_requests, b.pickup_date].join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
     }
     function groupByCustomer(bookings) {
       var map = {};
       bookings.forEach(function (b) {
-        var key = normalizePhone(b.phone) || ('e:' + (b.email || '').toLowerCase());
-        if (!key) key = 'unknown';
-        if (!map[key]) {
-          map[key] = { name: b.name, phone: b.phone, email: b.email, trips: [], lastRideDate: null };
-        }
+        var key = normalizePhone(b.phone) || (b.email ? 'e:' + b.email.toLowerCase() : 'n:' + (b.name || '').toLowerCase().trim()) || 'unknown';
+        if (!map[key]) map[key] = { name: b.name, phone: b.phone, email: b.email, trips: [], lastRideDate: null };
         var rec = map[key];
         rec.name = rec.name || b.name;
         rec.phone = rec.phone || b.phone;
         rec.email = rec.email || b.email;
         rec.trips.push(b);
         var dt = getTripDateTime(b);
-        if (dt && dt <= new Date() && (!rec.lastRideDate || dt > rec.lastRideDate)) rec.lastRideDate = dt;
+        if (dt && dt <= new Date() && tripStatus(b) !== 'cancelled' && (!rec.lastRideDate || dt > rec.lastRideDate)) rec.lastRideDate = dt;
       });
       var list = Object.keys(map).map(function (k) {
         var c = map[k];
         c.trips.sort(function (a, b) {
-          var da = getTripDateTime(a);
-          var db = getTripDateTime(b);
+          var da = getTripDateTime(a), db = getTripDateTime(b);
           if (!da) return 1;
           if (!db) return -1;
           return db - da;
@@ -373,87 +489,227 @@
       list.sort(function (a, b) {
         var at = a.lastRideDate ? a.lastRideDate.getTime() : 0;
         var bt = b.lastRideDate ? b.lastRideDate.getTime() : 0;
-        return bt - at;
+        if (bt !== at) return bt - at;
+        return (a.name || '').localeCompare(b.name || '');
       });
       return list;
     }
 
+    function tripCardHtml(b) {
+      var s = tripStatus(b);
+      var contact = [];
+      if (b.phone) contact.push('<a href="tel:' + esc(normalizePhone(b.phone)) + '">' + esc(b.phone) + '</a>');
+      if (b.email) contact.push('<a href="mailto:' + esc(b.email) + '">' + esc(b.email) + '</a>');
+      return '<div class="trip-head">' + esc(b.name || '—') +
+          ' <span class="trip-badge status-' + esc(s) + '">' + esc(s.charAt(0).toUpperCase() + s.slice(1)) + '</span>' +
+          (b.fare ? ' <span class="trip-fare">$' + esc(String(b.fare).replace(/^\$/, '')) + '</span>' : '') +
+          (b.source === 'manual' ? ' <span class="trip-source">added by you</span>' : '') +
+        '</div>' +
+        '<div class="trip-when">' + esc(formatDateTime(b)) + '</div>' +
+        '<div class="trip-meta">' + esc(tripSummary(b)) + '</div>' +
+        (contact.length ? '<div class="trip-meta">' + contact.join(' · ') + '</div>' : '') +
+        (b.special_requests ? '<div class="trip-meta"><em>Request:</em> ' + esc(b.special_requests) + '</div>' : '') +
+        (b.admin_notes ? '<div class="trip-notes">' + esc(b.admin_notes) + '</div>' : '') +
+        '<div class="trip-card-actions">' +
+          '<label class="trip-status-quick">Status <select data-id="' + esc(b.id) + '" class="trip-status-select">' +
+            ['requested', 'confirmed', 'completed', 'cancelled'].map(function (v) {
+              return '<option value="' + v + '"' + (v === s ? ' selected' : '') + '>' + v.charAt(0).toUpperCase() + v.slice(1) + '</option>';
+            }).join('') +
+          '</select></label>' +
+          '<button type="button" class="btn-small trip-edit-btn" data-id="' + esc(b.id) + '">Edit</button>' +
+        '</div>';
+    }
+
+    function renderTripList(container, emptyEl, list) {
+      container.innerHTML = '';
+      list.forEach(function (b) {
+        var card = document.createElement('div');
+        card.className = 'crm-trip-card' + (tripStatus(b) === 'cancelled' ? ' is-cancelled' : '');
+        card.innerHTML = tripCardHtml(b);
+        container.appendChild(card);
+      });
+      emptyEl.style.display = list.length ? 'none' : 'block';
+    }
+
+    function renderCRM() {
+      var q = (crmSearch.value || '').trim().toLowerCase();
+      var filtered = allBookings.filter(function (b) { return matchesSearch(b, q); });
+      var active = filtered.filter(isTripActive).sort(function (a, b) {
+        var da = getTripDateTime(a), db = getTripDateTime(b);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+      var past = filtered.filter(function (b) { return !isTripActive(b); }).sort(function (a, b) {
+        var da = getTripDateTime(a), db = getTripDateTime(b);
+        return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+      });
+      var customers = groupByCustomer(filtered);
+
+      var allCustomers = groupByCustomer(allBookings).length;
+      document.getElementById('crm-stats').textContent = allCustomers + ' customer' + (allCustomers !== 1 ? 's' : '') + ' · ' +
+        allBookings.filter(isTripActive).length + ' upcoming · ' + allBookings.length + ' total trip' + (allBookings.length !== 1 ? 's' : '') +
+        (q ? ' — showing matches for "' + crmSearch.value.trim() + '"' : '');
+
+      var customersBody = document.getElementById('crm-customers-body');
+      customersBody.innerHTML = '';
+      customers.forEach(function (c) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + esc(c.name || '—') + '</td>' +
+          '<td>' + (c.phone ? '<a href="tel:' + esc(normalizePhone(c.phone)) + '">' + esc(c.phone) + '</a>' : '—') + '</td>' +
+          '<td>' + (c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : '—') + '</td>' +
+          '<td>' + (c.lastRideDate ? formatDate(c.lastRideDate) : '—') + '</td>' +
+          '<td>' + c.trips.length + '</td>' +
+          '<td><button type="button" class="btn-small customer-detail-toggle">Trips</button></td>';
+        var detailsRow = document.createElement('tr');
+        detailsRow.className = 'crm-customer-details';
+        var cell = document.createElement('td');
+        cell.colSpan = 6;
+        var listEl = document.createElement('div');
+        listEl.className = 'crm-trips-list';
+        c.trips.forEach(function (b) {
+          var card = document.createElement('div');
+          card.className = 'crm-trip-card' + (tripStatus(b) === 'cancelled' ? ' is-cancelled' : '');
+          card.innerHTML = tripCardHtml(b);
+          listEl.appendChild(card);
+        });
+        cell.appendChild(listEl);
+        detailsRow.appendChild(cell);
+        tr.querySelector('button').addEventListener('click', function () {
+          detailsRow.classList.toggle('show');
+        });
+        customersBody.appendChild(tr);
+        customersBody.appendChild(detailsRow);
+      });
+      var emptyCustomers = document.getElementById('crm-customers-empty');
+      emptyCustomers.textContent = q ? 'No customers match your search.' : 'No customers yet. Use "+ Add trip" to enter past customers.';
+      emptyCustomers.style.display = customers.length ? 'none' : 'block';
+
+      renderTripList(document.getElementById('crm-active-body'), document.getElementById('crm-active-empty'), active);
+      renderTripList(document.getElementById('crm-completed-body'), document.getElementById('crm-completed-empty'), past);
+    }
+
     function loadCRM() {
-      fetch(API + '/api/bookings', { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.json() : []; })
-        .catch(function () { return []; })
+      fetch(API + '/api/storage-status', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (s) {
+          document.getElementById('crm-storage-warning').style.display = (s && s.database === false) ? 'block' : 'none';
+        }).catch(function () {});
+      return fetch(API + '/api/bookings', { credentials: 'same-origin' })
+        .then(function (r) {
+          if (r.status === 401) { showLogin(); return null; }
+          return r.ok ? r.json() : Promise.reject(new Error('load failed'));
+        })
         .then(function (bookings) {
-          var active = bookings.filter(isTripActive);
-          var completed = bookings.filter(function (b) { return !isTripActive(b); });
-          var customers = groupByCustomer(bookings);
-
-          document.querySelectorAll('.crm-tab').forEach(function (btn) {
-            btn.classList.toggle('active', btn.dataset.tab === 'customers');
-          });
-          document.querySelectorAll('.crm-panel').forEach(function (panel) {
-            panel.classList.remove('show');
-          });
-          var customersBody = document.getElementById('crm-customers-body');
-          var customersEmpty = document.getElementById('crm-customers-empty');
-          if (customersBody) {
-            customersBody.innerHTML = '';
-            customers.forEach(function (c) {
-              var lastRideStr = c.lastRideDate ? formatDate(c.lastRideDate) : '—';
-              var tr = document.createElement('tr');
-              tr.innerHTML = '<td>' + (c.name || '—').replace(/</g, '&lt;') + '</td>' +
-                '<td>' + (c.phone || '—').replace(/</g, '&lt;') + '</td>' +
-                '<td>' + (c.email || '—').replace(/</g, '&lt;') + '</td>' +
-                '<td>' + lastRideStr + '</td>' +
-                '<td>' + c.trips.length + '</td>' +
-                '<td><button type="button" class="customer-detail-toggle">Details</button></td>';
-              var detailsBtn = tr.querySelector('button');
-              var detailsRow = document.createElement('tr');
-              detailsRow.className = 'crm-customer-details';
-              detailsRow.innerHTML = '<td colspan="6"><div class="crm-table-wrap"><ul style="list-style:none;padding:0;margin:0;font-size:0.85rem;">' +
-                c.trips.map(function (t) {
-                  return '<li style="padding:0.35rem 0;border-bottom:1px solid #eee;">' + tripSummary(t).replace(/</g, '&lt;') + '</li>';
-                }).join('') + '</ul></div></td>';
-              detailsBtn.addEventListener('click', function () {
-                detailsRow.classList.toggle('show');
-              });
-              customersBody.appendChild(tr);
-              customersBody.appendChild(detailsRow);
-            });
-            if (customersEmpty) customersEmpty.style.display = customers.length ? 'none' : 'block';
-          }
-          document.getElementById('crm-customers').classList.add('show');
-
-          var activeBody = document.getElementById('crm-active-body');
-          var activeEmpty = document.getElementById('crm-active-empty');
-          if (activeBody) {
-            activeBody.innerHTML = '';
-            active.forEach(function (b) {
-              var card = document.createElement('div');
-              card.className = 'crm-trip-card';
-              card.innerHTML = '<div class="trip-head">' + (b.name || '—').replace(/</g, '&lt;') + ' <span class="trip-badge active">Active</span></div>' +
-                '<div class="trip-meta">' + tripSummary(b).replace(/</g, '&lt;') + '</div>' +
-                '<div class="trip-meta">' + (b.phone || '').replace(/</g, '&lt;') + ' · ' + (b.email || '').replace(/</g, '&lt;') + '</div>';
-              activeBody.appendChild(card);
-            });
-            if (activeEmpty) activeEmpty.style.display = active.length ? 'none' : 'block';
-          }
-
-          var completedBody = document.getElementById('crm-completed-body');
-          var completedEmpty = document.getElementById('crm-completed-empty');
-          if (completedBody) {
-            completedBody.innerHTML = '';
-            completed.forEach(function (b) {
-              var card = document.createElement('div');
-              card.className = 'crm-trip-card';
-              card.innerHTML = '<div class="trip-head">' + (b.name || '—').replace(/</g, '&lt;') + ' <span class="trip-badge completed">Completed</span></div>' +
-                '<div class="trip-meta">' + tripSummary(b).replace(/</g, '&lt;') + '</div>' +
-                '<div class="trip-meta">' + (b.phone || '').replace(/</g, '&lt;') + ' · ' + (b.email || '').replace(/</g, '&lt;') + '</div>';
-              completedBody.appendChild(card);
-            });
-            if (completedEmpty) completedEmpty.style.display = completed.length ? 'none' : 'block';
-          }
+          if (!bookings) return;
+          allBookings = Array.isArray(bookings) ? bookings : [];
+          renderCRM();
+        })
+        .catch(function () {
+          document.getElementById('crm-stats').textContent = 'Could not load bookings. Click Refresh to try again.';
         });
     }
+
+    function saveBooking(id, data) {
+      return fetch(API + '/api/admin/bookings' + (id ? '/' + encodeURIComponent(id) : ''), {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'same-origin'
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          if (!r.ok) throw new Error(body.error || 'Could not save.');
+          return body.booking;
+        });
+      });
+    }
+
+    function fillDropoffSelect(selected) {
+      var sel = document.getElementById('trip-dropoff-select');
+      var opts = '<option value="">—</option>';
+      (config.destinations || []).forEach(function (d) {
+        opts += '<option value="' + esc(d.id) + '">' + esc(d.name || d.id) + '</option>';
+      });
+      if (selected && !(config.destinations || []).some(function (d) { return d.id === selected; })) {
+        opts += '<option value="' + esc(selected) + '">' + esc(selected) + '</option>';
+      }
+      sel.innerHTML = opts;
+      sel.value = selected || '';
+    }
+
+    function openTripDialog(b) {
+      editingId = b ? b.id : null;
+      tripForm.reset();
+      tripFormError.textContent = '';
+      document.getElementById('trip-dialog-title').textContent = b ? 'Edit trip' : 'Add trip';
+      tripDeleteBtn.style.display = b ? '' : 'none';
+      fillDropoffSelect(b ? b.dropoff_dest : '');
+      var data = b || { status: 'confirmed', passengers: 1 };
+      Array.prototype.forEach.call(tripForm.elements, function (el) {
+        if (!el.name || el.name === 'dropoff_dest') return;
+        if (el.type === 'checkbox') el.checked = !!data[el.name];
+        else el.value = data[el.name] != null ? data[el.name] : (el.name === 'passengers' ? 1 : '');
+      });
+      if (!data.status) tripForm.elements.status.value = 'requested';
+      if (typeof tripDialog.showModal === 'function') tripDialog.showModal();
+      else tripDialog.setAttribute('open', '');
+      tripForm.elements.name.focus();
+    }
+    function closeTripDialog() {
+      if (typeof tripDialog.close === 'function') tripDialog.close();
+      else tripDialog.removeAttribute('open');
+    }
+
+    tripForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = {};
+      Array.prototype.forEach.call(tripForm.elements, function (el) {
+        if (!el.name) return;
+        data[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      var saveBtn = document.getElementById('trip-save-btn');
+      saveBtn.disabled = true;
+      tripFormError.textContent = '';
+      saveBooking(editingId, data).then(function () {
+        closeTripDialog();
+        return loadCRM();
+      }).catch(function (err) {
+        tripFormError.textContent = err.message;
+      }).then(function () { saveBtn.disabled = false; });
+    });
+
+    tripDeleteBtn.addEventListener('click', function () {
+      if (!editingId) return;
+      var b = allBookings.find(function (x) { return x.id === editingId; });
+      if (!confirm('Delete this trip' + (b && b.name ? ' for ' + b.name : '') + '? This cannot be undone.')) return;
+      fetch(API + '/api/admin/bookings/' + encodeURIComponent(editingId), { method: 'DELETE', credentials: 'same-origin' })
+        .then(function (r) { if (!r.ok) throw new Error('Could not delete.'); })
+        .then(function () { closeTripDialog(); return loadCRM(); })
+        .catch(function (err) { tripFormError.textContent = err.message; });
+    });
+
+    document.getElementById('trip-cancel-btn').addEventListener('click', closeTripDialog);
+    document.getElementById('crm-add-btn').addEventListener('click', function () { openTripDialog(null); });
+    document.getElementById('crm-refresh-btn').addEventListener('click', loadCRM);
+    crmSearch.addEventListener('input', renderCRM);
+
+    // Edit buttons and quick status changes on any trip card
+    document.getElementById('admin-panel-crm').addEventListener('click', function (e) {
+      var btn = e.target.closest('.trip-edit-btn');
+      if (!btn) return;
+      var b = allBookings.find(function (x) { return x.id === btn.dataset.id; });
+      if (b) openTripDialog(b);
+    });
+    document.getElementById('admin-panel-crm').addEventListener('change', function (e) {
+      var sel = e.target.closest('.trip-status-select');
+      if (!sel) return;
+      sel.disabled = true;
+      saveBooking(sel.dataset.id, { status: sel.value }).then(function (updated) {
+        allBookings = allBookings.map(function (x) { return x.id === updated.id ? updated : x; });
+        renderCRM();
+      }).catch(function (err) {
+        alert(err.message);
+        sel.disabled = false;
+      });
+    });
 
     document.querySelectorAll('.crm-tab').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -472,10 +728,10 @@
         document.querySelectorAll('.admin-panel').forEach(function (p) { p.classList.remove('show'); });
         var panel = document.getElementById('admin-panel-' + tab);
         if (panel) panel.classList.add('show');
+        // The "Save changes" bar only applies to Settings and Locations & pricing.
+        document.getElementById('settings-save-bar').style.display = tab === 'crm' ? 'none' : '';
       });
     });
-    var crmRefreshBtn = document.getElementById('crm-refresh-btn');
-    if (crmRefreshBtn) crmRefreshBtn.addEventListener('click', loadCRM);
 
     var config = { destinations: [], routes: [] };
 

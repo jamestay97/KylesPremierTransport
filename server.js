@@ -1,5 +1,12 @@
 var path = require('path');
 var fs = require('fs');
+
+// Local development: load DATABASE_URL etc. from .env.local / .env (written by `neon env pull`).
+// On Render, set these as environment variables instead.
+['.env.local', '.env'].forEach(function (f) {
+  var p = path.join(__dirname, f);
+  if (fs.existsSync(p) && typeof process.loadEnvFile === 'function') process.loadEnvFile(p);
+});
 var https = require('https');
 var express = require('express');
 var session = require('express-session');
@@ -17,35 +24,18 @@ var TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 var TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 var NOTIFY_PHONE = process.env.NOTIFY_PHONE;
 
-var CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
-var BOOKINGS_PATH = path.join(__dirname, 'data', 'bookings.json');
+var storage = require('./storage');
 var ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@premiertransport.services';
 var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 
-function readBookings() {
-  try {
-    var data = fs.readFileSync(BOOKINGS_PATH, 'utf8');
-    var list = JSON.parse(data);
-    return Array.isArray(list) ? list : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function writeBookings(bookings) {
-  try {
-    var dir = path.dirname(BOOKINGS_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(BOOKINGS_PATH, JSON.stringify(bookings, null, 2), 'utf8');
-  } catch (e) {
-    console.warn('Could not write bookings:', e.message);
-  }
-}
+// Settings are loaded from storage once at startup and kept in memory;
+// every save goes to storage (the database when DATABASE_URL is set).
+var configCache = null;
 
 function readConfig() {
   try {
-    var data = fs.readFileSync(CONFIG_PATH, 'utf8');
-    var c = JSON.parse(data);
+    if (!configCache) throw new Error('no config');
+    var c = JSON.parse(JSON.stringify(configCache));
     if (!c.addons || !Array.isArray(c.addons)) {
       c.addons = [{ id: 'car_seat', label: 'Car seat or booster', price: c.carSeatFee || 10, enabled: true }];
     }
@@ -74,17 +64,22 @@ function readConfig() {
   }
 }
 
-function writeConfig(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
-  var jsPath = path.join(__dirname, 'js', 'destinations-config.js');
+function publicConfigScript(config) {
   var publicConfig = Object.assign({}, config);
   delete publicConfig.notificationEmails;
   delete publicConfig.verifiedNotificationEmails;
+  return 'window.PremierTransportConfig = ' + JSON.stringify(publicConfig) + ';\n';
+}
+
+function writeConfig(config) {
+  configCache = config;
+  // Keep the local JS copy in sync too (used when developing / static fallback).
   try {
-    fs.writeFileSync(jsPath, 'window.PremierTransportConfig = ' + JSON.stringify(publicConfig) + ';\n', 'utf8');
+    fs.writeFileSync(path.join(__dirname, 'js', 'destinations-config.js'), publicConfigScript(config), 'utf8');
   } catch (e) {
     console.warn('Could not write destinations-config.js:', e.message);
   }
+  return storage.saveConfig(config);
 }
 
 function resendSendEmail(payload) {
@@ -226,8 +221,12 @@ app.post('/api/config', requireAdmin, function (req, res) {
       sendVerificationEmail(email, baseUrl).catch(function (err) { console.warn('Verification email failed:', err.message); });
     }
   });
-  writeConfig(config);
-  res.json({ ok: true });
+  writeConfig(config).then(function () {
+    res.json({ ok: true });
+  }).catch(function (err) {
+    console.error('Saving settings failed:', err.message);
+    res.status(500).json({ error: 'Could not save settings. Please try again.' });
+  });
 });
 
 app.get('/api/me', function (req, res) {
@@ -555,8 +554,7 @@ app.post('/api/bookings', function (req, res) {
       code: 'PICKUP_TOO_SOON'
     });
   }
-  var bookings = readBookings();
-  var id = 'b' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+  var id = newBookingId();
   var record = {
     id: id,
     createdAt: new Date().toISOString(),
@@ -576,22 +574,132 @@ app.post('/api/bookings', function (req, res) {
     phone: (body.phone || '').trim(),
     email: (body.email || '').trim().toLowerCase(),
     special_requests: (body.special_requests || '').trim(),
-    addon_car_seat: !!body.addon_car_seat
+    addon_car_seat: !!body.addon_car_seat,
+    status: 'requested',
+    fare: '',
+    admin_notes: '',
+    source: 'website'
   };
-  var isDup = isDuplicateBooking(bookings, record, 10);
-  if (isDup) {
-    res.status(201).json({ ok: true, id: id, duplicate: true });
-    return;
-  }
-  bookings.push(record);
-  writeBookings(bookings);
-  sendBookingConfirmationToCustomer(record);
-  setTimeout(function () { notifyNewBooking(record); }, 600);
-  res.status(201).json({ ok: true, id: id });
+  storage.listBookings().then(function (bookings) {
+    if (isDuplicateBooking(bookings, record, 10)) {
+      res.status(201).json({ ok: true, id: id, duplicate: true });
+      return;
+    }
+    return storage.addBooking(record).then(function () {
+      sendBookingConfirmationToCustomer(record);
+      setTimeout(function () { notifyNewBooking(record); }, 600);
+      res.status(201).json({ ok: true, id: id });
+    });
+  }).catch(function (err) {
+    console.error('Saving booking failed:', err.message);
+    res.status(500).json({ error: 'We could not save your booking. Please call or text (727) 999-4999.' });
+  });
 });
 
+function newBookingId() {
+  return 'b' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+}
+
+var BOOKING_STATUSES = ['requested', 'confirmed', 'completed', 'cancelled'];
+var EDITABLE_TEXT_FIELDS = ['pickup_address', 'dropoff_dest', 'dropoff_other_address', 'pickup_date', 'pickup_time',
+  'return_date', 'return_time', 'return_dropoff_address', 'airline', 'flight_number', 'name', 'phone',
+  'special_requests', 'fare', 'admin_notes'];
+
+// Apply admin-editable fields from a request body onto a booking record.
+function applyAdminFields(record, body) {
+  EDITABLE_TEXT_FIELDS.forEach(function (f) {
+    if (body[f] !== undefined) record[f] = String(body[f] == null ? '' : body[f]).trim();
+  });
+  if (body.email !== undefined) record.email = String(body.email || '').trim().toLowerCase();
+  if (body.passengers !== undefined) record.passengers = parseInt(body.passengers, 10) || 1;
+  if (body.round_trip !== undefined) record.round_trip = !!body.round_trip;
+  if (body.addon_car_seat !== undefined) record.addon_car_seat = !!body.addon_car_seat;
+  if (body.status !== undefined && BOOKING_STATUSES.indexOf(body.status) !== -1) record.status = body.status;
+  return record;
+}
+
 app.get('/api/bookings', requireAdmin, function (req, res) {
-  res.json(readBookings());
+  storage.listBookings().then(function (list) {
+    res.json(list);
+  }).catch(function (err) {
+    console.error('Loading bookings failed:', err.message);
+    res.status(500).json({ error: 'Could not load bookings.' });
+  });
+});
+
+// Admin: add a trip by hand (e.g. phone bookings or re-entering past customers). No emails are sent.
+app.post('/api/admin/bookings', requireAdmin, function (req, res) {
+  var body = req.body || {};
+  if (!String(body.name || '').trim() && !String(body.phone || '').trim() && !String(body.email || '').trim()) {
+    return res.status(400).json({ error: 'Enter at least a name, phone, or email.' });
+  }
+  var record = applyAdminFields({
+    id: newBookingId(),
+    createdAt: new Date().toISOString(),
+    pickup_address: '', dropoff_dest: '', dropoff_other_address: '', pickup_date: '', pickup_time: '',
+    round_trip: false, return_date: '', return_time: '', return_dropoff_address: '', passengers: 1,
+    airline: '', flight_number: '', name: '', phone: '', email: '', special_requests: '',
+    addon_car_seat: false, status: 'confirmed', fare: '', admin_notes: '', source: 'manual'
+  }, body);
+  storage.addBooking(record).then(function () {
+    res.status(201).json({ ok: true, booking: record });
+  }).catch(function (err) {
+    console.error('Adding booking failed:', err.message);
+    res.status(500).json({ error: 'Could not save. Please try again.' });
+  });
+});
+
+app.put('/api/admin/bookings/:id', requireAdmin, function (req, res) {
+  var id = req.params.id;
+  storage.getBooking(id).then(function (existing) {
+    if (!existing) return res.status(404).json({ error: 'Booking not found.' });
+    var record = applyAdminFields(Object.assign({}, existing), req.body || {});
+    record.updatedAt = new Date().toISOString();
+    return storage.updateBooking(id, record).then(function () {
+      res.json({ ok: true, booking: record });
+    });
+  }).catch(function (err) {
+    console.error('Updating booking failed:', err.message);
+    res.status(500).json({ error: 'Could not save. Please try again.' });
+  });
+});
+
+app.delete('/api/admin/bookings/:id', requireAdmin, function (req, res) {
+  storage.deleteBooking(req.params.id).then(function (deleted) {
+    if (!deleted) return res.status(404).json({ error: 'Booking not found.' });
+    res.json({ ok: true });
+  }).catch(function (err) {
+    console.error('Deleting booking failed:', err.message);
+    res.status(500).json({ error: 'Could not delete. Please try again.' });
+  });
+});
+
+// Admin: download every booking as a spreadsheet (CSV) for backup.
+app.get('/api/admin/bookings.csv', requireAdmin, function (req, res) {
+  var cols = ['createdAt', 'status', 'source', 'name', 'phone', 'email', 'pickup_date', 'pickup_time', 'pickup_address',
+    'dropoff_dest', 'dropoff_other_address', 'round_trip', 'return_date', 'return_time', 'return_dropoff_address',
+    'passengers', 'airline', 'flight_number', 'addon_car_seat', 'fare', 'special_requests', 'admin_notes', 'id'];
+  function cell(v) {
+    var s = v == null ? '' : String(v);
+    if (/^[=+\-@]/.test(s)) s = "'" + s; // stop spreadsheet formula injection
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  storage.listBookings().then(function (list) {
+    var rows = [cols.join(',')].concat(list.map(function (b) {
+      return cols.map(function (c) { return cell(b[c]); }).join(',');
+    }));
+    var stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="premier-transport-bookings-' + stamp + '.csv"');
+    res.send('﻿' + rows.join('\r\n'));
+  }).catch(function (err) {
+    console.error('Export failed:', err.message);
+    res.status(500).send('Export failed.');
+  });
+});
+
+app.get('/api/storage-status', requireAdmin, function (req, res) {
+  res.json({ database: storage.usingDatabase() });
 });
 
 app.get('/email-verified', function (req, res) {
@@ -603,7 +711,7 @@ app.get('/email-verified', function (req, res) {
     if (list.indexOf(email) !== -1 && verified.indexOf(email) === -1) {
       verified.push(email);
       config.verifiedNotificationEmails = verified;
-      writeConfig(config);
+      writeConfig(config).catch(function (err) { console.error('Saving verified email failed:', err.message); });
     }
   }
   res.type('html').send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email verified</title></head><body style="font-family:sans-serif;max-width:480px;margin:2rem auto;padding:0 1rem;"><h1 style="color:#0d3b5c;">You\'re all set</h1><p>This email address is set up to receive Premier Transport booking notifications.</p></body></html>');
@@ -624,6 +732,20 @@ app.post('/api/verify-notification-email', requireAdmin, function (req, res) {
   });
 });
 
+// Always serve the live settings (from the database) instead of the file on disk.
+app.get('/js/destinations-config.js', function (req, res) {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.type('application/javascript').send(publicConfigScript(readConfig()));
+});
+
+// Don't expose server internals or raw data files as static files.
+app.use(function (req, res, next) {
+  if (/^\/(data|node_modules)\//.test(req.path) || /^\/(server|storage)\.js$/.test(req.path) || /^\/package(-lock)?\.json$/.test(req.path) || /^\/\.git/.test(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  next();
+});
+
 app.use(express.static(__dirname, { index: false }));
 
 app.get('/', function (req, res) {
@@ -638,7 +760,21 @@ app.get('/book.html', function (req, res) {
   res.sendFile(path.join(__dirname, 'book.html'));
 });
 
-app.listen(PORT, function () {
+function start() {
+  return storage.init().then(function () {
+    return storage.loadConfig();
+  }).then(function (c) {
+    configCache = c;
+    app.listen(PORT, onListening);
+  });
+}
+
+start().catch(function (err) {
+  console.error('[Startup] Could not connect to storage:', err.message);
+  process.exit(1);
+});
+
+function onListening() {
   console.log('Premier Transport server at http://localhost:' + PORT);
   console.log('Admin: http://localhost:' + PORT + '/admin');
   console.log('Set ADMIN_EMAIL and ADMIN_PASSWORD in environment to secure login.');
@@ -646,4 +782,4 @@ app.listen(PORT, function () {
   if (RESEND_API_KEY && RESEND_FROM.indexOf('onboarding@resend.dev') !== -1) {
     console.log('[Email] Using default sender — set RESEND_FROM_EMAIL to your verified domain (e.g. noreply@premiertransport.services) so admin notifications reach all NOTIFY_EMAIL addresses.');
   }
-});
+}
