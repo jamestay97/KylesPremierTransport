@@ -159,6 +159,8 @@
           <input type="search" id="crm-search" placeholder="Search name, phone, email, address…" aria-label="Search customers and trips">
           <button type="button" class="btn btn-primary" id="crm-add-btn">+ Add trip</button>
           <a class="btn btn-outline crm-outline" id="crm-export-btn" href="/api/admin/bookings.csv">Download backup (CSV)</a>
+          <button type="button" class="btn btn-outline crm-outline" id="crm-import-btn" title="Import a Resend email export or a CRM backup CSV">Import CSV</button>
+          <input type="file" id="crm-import-file" accept=".csv,text/csv" hidden>
           <button type="button" class="btn btn-outline crm-outline" id="crm-refresh-btn">Refresh</button>
         </div>
         <p class="crm-stats" id="crm-stats"></p>
@@ -689,6 +691,124 @@
     document.getElementById('trip-cancel-btn').addEventListener('click', closeTripDialog);
     document.getElementById('crm-add-btn').addEventListener('click', function () { openTripDialog(null); });
     document.getElementById('crm-refresh-btn').addEventListener('click', loadCRM);
+
+    // ---- Import: Resend "emails sent" export, or this CRM's own backup CSV ----
+    function parseCSV(text) {
+      var rows = [], row = [], field = '', i = 0, q = false;
+      text = text.replace(/^﻿/, '');
+      while (i < text.length) {
+        var c = text[i];
+        if (q) {
+          if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+          else field += c;
+        } else if (c === '"') q = true;
+        else if (c === ',') { row.push(field); field = ''; }
+        else if (c === '\n' || c === '\r') {
+          if (c === '\r' && text[i + 1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.length > 1 || row[0] !== '') rows.push(row);
+          row = [];
+        } else field += c;
+        i++;
+      }
+      if (field !== '' || row.length) { row.push(field); rows.push(row); }
+      if (!rows.length) return [];
+      var head = rows[0].map(function (h) { return h.trim(); });
+      return rows.slice(1).map(function (r) {
+        var o = {};
+        head.forEach(function (h, j) { o[h] = r[j] != null ? r[j] : ''; });
+        return o;
+      });
+    }
+    function toIso(s) {
+      var d = new Date(String(s || '').trim().replace(' ', 'T').replace(/\+00$/, 'Z'));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Each Resend booking produced a customer email "Booking request received – DATE TIME" and,
+    // seconds later, an owner email "New booking: NAME – DATE". Pair them to get name + email + pickup.
+    function bookingsFromResend(rows) {
+      var notices = rows.filter(function (r) { return /^New booking:/.test(r.subject || ''); }).map(function (r) {
+        var m = /^New booking:\s*(.*?)\s*[–-]\s*(\d{4}-\d{2}-\d{2})\s*$/.exec(r.subject);
+        return m ? { name: m[1], date: m[2], at: toIso(r.created_at) } : null;
+      }).filter(Boolean);
+      var byKey = {};
+      rows.forEach(function (r) {
+        var m = /^Booking request received\s*[–-]\s*(\d{4}-\d{2}-\d{2})\s*(\d{1,2}:\d{2})?/.exec(r.subject || '');
+        if (!m) return;
+        var email = String(r.to || '').trim().toLowerCase();
+        var at = toIso(r.created_at);
+        var match = null;
+        notices.forEach(function (n) {
+          if (n.date !== m[1] || !at || !n.at) return;
+          var gap = n.at - at;
+          if (gap >= -2000 && gap <= 60000 && (!match || Math.abs(gap) < Math.abs(match.at - at))) match = n;
+        });
+        var key = email + '|' + m[1] + '|' + (m[2] || '');
+        var rec = {
+          id: 'rs-' + String(r.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60),
+          createdAt: at ? at.toISOString() : '',
+          name: match ? match.name : '',
+          email: email,
+          pickup_date: m[1],
+          pickup_time: m[2] || '',
+          status: 'requested',
+          source: 'resend-import',
+          admin_notes: 'Imported from Resend email log — phone, addresses and trip details were not in the export.'
+        };
+        // A customer who submitted the same trip twice: keep one (the latest).
+        if (!byKey[key] || rec.createdAt > byKey[key].createdAt) byKey[key] = rec;
+      });
+      return Object.keys(byKey).map(function (k) { return byKey[k]; });
+    }
+
+    document.getElementById('crm-import-btn').addEventListener('click', function () {
+      document.getElementById('crm-import-file').click();
+    });
+    document.getElementById('crm-import-file').addEventListener('change', function () {
+      var input = this;
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        input.value = '';
+        var rows = parseCSV(String(reader.result || ''));
+        var cols = rows.length ? Object.keys(rows[0]) : [];
+        var list, kind;
+        if (cols.indexOf('subject') !== -1 && cols.indexOf('to') !== -1) {
+          list = bookingsFromResend(rows); kind = 'Resend email export';
+        } else if (cols.indexOf('pickup_date') !== -1 && cols.indexOf('name') !== -1) {
+          list = rows.map(function (r) {
+            r.round_trip = r.round_trip === 'true';
+            r.addon_car_seat = r.addon_car_seat === 'true';
+            Object.keys(r).forEach(function (k) { if (typeof r[k] === 'string' && r[k].charAt(0) === "'" && /^'[=+\-@]/.test(r[k])) r[k] = r[k].slice(1); });
+            return r;
+          });
+          kind = 'CRM backup';
+        } else {
+          alert('This file doesn\'t look like a Resend email export or a CRM backup CSV.');
+          return;
+        }
+        if (!list.length) { alert('No bookings found in this ' + kind + '.'); return; }
+        var names = list.slice(0, 12).map(function (b) { return '• ' + (b.name || b.email || b.phone) + ' — ' + (b.pickup_date || 'no date') + ' ' + (b.pickup_time || ''); }).join('\n');
+        if (!confirm('Import ' + list.length + ' trip' + (list.length !== 1 ? 's' : '') + ' from this ' + kind + '?\n\n' + names + (list.length > 12 ? '\n…' : '') + '\n\nTrips already in the CRM are skipped.')) return;
+        fetch(API + '/api/admin/bookings/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookings: list }),
+          credentials: 'same-origin'
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (b) {
+            if (!r.ok) throw new Error(b.error || 'Import failed.');
+            return b;
+          });
+        }).then(function (b) {
+          alert('Imported ' + b.added + ' trip' + (b.added !== 1 ? 's' : '') + (b.skipped ? ' (' + b.skipped + ' already in the CRM, skipped)' : '') + '.');
+          return loadCRM();
+        }).catch(function (err) { alert(err.message); });
+      };
+      reader.readAsText(file);
+    });
     crmSearch.addEventListener('input', renderCRM);
 
     // Edit buttons and quick status changes on any trip card

@@ -137,7 +137,7 @@ function sendVerificationEmail(email, baseUrl) {
   });
 }
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'premier-transport-secret-change-in-production',
@@ -646,6 +646,47 @@ app.post('/api/admin/bookings', requireAdmin, function (req, res) {
   }).catch(function (err) {
     console.error('Adding booking failed:', err.message);
     res.status(500).json({ error: 'Could not save. Please try again.' });
+  });
+});
+
+// Admin: import many trips at once (from a Resend email export or a CRM backup CSV, parsed in the
+// browser). Trips whose id already exists are skipped, so importing the same file twice is safe.
+app.post('/api/admin/bookings/import', requireAdmin, function (req, res) {
+  var incoming = (req.body && Array.isArray(req.body.bookings)) ? req.body.bookings : null;
+  if (!incoming || !incoming.length) return res.status(400).json({ error: 'No trips to import.' });
+  if (incoming.length > 2000) return res.status(400).json({ error: 'Too many trips in one import (max 2000).' });
+  storage.listBookings().then(function (existing) {
+    var seen = {};
+    existing.forEach(function (b) { seen[b.id] = true; });
+    var toAdd = [];
+    var skipped = 0;
+    incoming.forEach(function (raw) {
+      if (!raw || typeof raw !== 'object') { skipped++; return; }
+      var id = (typeof raw.id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(raw.id)) ? raw.id : newBookingId();
+      if (seen[id]) { skipped++; return; }
+      var created = raw.createdAt && !isNaN(new Date(raw.createdAt).getTime()) ? new Date(raw.createdAt).toISOString() : new Date().toISOString();
+      var record = applyAdminFields({
+        id: id,
+        createdAt: created,
+        pickup_address: '', dropoff_dest: '', dropoff_other_address: '', pickup_date: '', pickup_time: '',
+        round_trip: false, return_date: '', return_time: '', return_dropoff_address: '', passengers: 1,
+        airline: '', flight_number: '', name: '', phone: '', email: '', special_requests: '',
+        addon_car_seat: false, status: 'requested', fare: '', admin_notes: '',
+        source: (typeof raw.source === 'string' && /^[a-z-]{1,30}$/.test(raw.source)) ? raw.source : 'import'
+      }, raw);
+      if (!record.name && !record.phone && !record.email) { skipped++; return; }
+      seen[id] = true;
+      toAdd.push(record);
+    });
+    // Add one at a time so file storage (local dev) never loses a write.
+    return toAdd.reduce(function (p, r) {
+      return p.then(function () { return storage.addBooking(r); });
+    }, Promise.resolve()).then(function () {
+      res.json({ ok: true, added: toAdd.length, skipped: skipped });
+    });
+  }).catch(function (err) {
+    console.error('Import failed:', err.message);
+    res.status(500).json({ error: 'Import failed. Nothing may have been saved; please try again.' });
   });
 });
 
